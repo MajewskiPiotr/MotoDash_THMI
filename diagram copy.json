@@ -1,0 +1,51 @@
+{
+  "version": 1,
+  "author": "MotoDash",
+  "editor": "wokwi",
+  "parts": [
+    {
+      "type": "board-esp32-s3-devkitc-1",
+      "id": "esp",
+      "top": 0,
+      "left": -180,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-ili9341",
+      "id": "lcd",
+      "top": -30,
+      "left": 180,
+      "rotate": 90,
+      "attrs": {}
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn1",
+      "top": 270,
+      "left": 160,
+      "attrs": { "color": "blue", "label": "MODE (GPIO 15)" }
+    },
+    {
+      "type": "wokwi-pushbutton",
+      "id": "btn2",
+      "top": 270,
+      "left": 280,
+      "attrs": { "color": "red", "label": "ACTION (GPIO 16)" }
+    }
+  ],
+  "connections": [
+    [ "esp:3V3", "lcd:VCC", "red", [ "h-30", "v-70", "h340" ] ],
+    [ "esp:GND.1", "lcd:GND", "black", [ "h-40", "v-80", "h360" ] ],
+    [ "esp:10", "lcd:CS", "green", [ "h-50", "v-90", "h380" ] ],
+    [ "esp:4", "lcd:RST", "orange", [ "h-60", "v-100", "h400" ] ],
+    [ "esp:7", "lcd:D/C", "yellow", [ "h-70", "v-110", "h420" ] ],
+    [ "esp:11", "lcd:MOSI", "blue", [ "h-80", "v-120", "h440" ] ],
+    [ "esp:12", "lcd:SCK", "purple", [ "h-90", "v-130", "h460" ] ],
+    [ "esp:3V3", "lcd:LED", "red", [ "h-30", "v-70", "h340" ] ],
+    [ "esp:15", "btn1:1.l", "blue", [ "h-30", "v140", "h260" ] ],
+    [ "esp:GND.2", "btn1:2.r", "black", [ "h-20", "v130", "h310" ] ],
+    [ "esp:16", "btn2:1.l", "red", [ "h-40", "v150", "h380" ] ],
+    [ "esp:GND.2", "btn2:2.r", "black", [ "h-20", "v130", "h430" ] ]
+
+  ]
+}
