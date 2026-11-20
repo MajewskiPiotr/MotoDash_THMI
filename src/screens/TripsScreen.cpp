@@ -158,6 +158,9 @@ bool TripsScreen::onModeLongPress(MotoState& state) {
     int durMin = (int)((dist / avgSpd) * 60.0f);
 
     archiveCurrentTrip(state, durMin, dist, state.tripAvgFuel100 , avgSpd);
+
+    // Trasa zapisana - zerujemy licznik wycieczki, żeby następna liczyła się od zera
+    if (fuelCalculator) fuelCalculator->resetCurrentTrip(state);
     return true;
 }
 

@@ -29,7 +29,7 @@ RefuelScreen    refuelScreen(&fuelCalculator, &screenManager); // Nakładka (poz
 RidingScreen    ridingScreen(&fuelCalculator, &refuelScreen);
 MotoStatsScreen motoStatsScreen(&canReader);
 SettingsScreen  settingsScreen(&screenManager);
-TripsScreen  tripsScreen;
+TripsScreen     tripsScreen(&fuelCalculator);
 
 void setup() {
     Serial.begin(115200);
