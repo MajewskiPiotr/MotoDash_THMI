@@ -7,6 +7,7 @@
 class ScreenManager {
 public:
     void init();                           // Inicjalizuje sprzętowo ekran TFT i włącza jego zasilanie
+    void playBootAnimation();
     void registerScreen(Screen* screen);   // Dodaje nowy ekran do listy dostępnych widoków (karuzeli)
     void nextScreen(MotoState& state);     // Przełącza na kolejny ekran w pętli (0 -> 1 -> 2 -> 0)
     void goToFirstScreen(MotoState& state);// Wraca bezpośrednio do pierwszego ekranu (Tryb Jazdy)
