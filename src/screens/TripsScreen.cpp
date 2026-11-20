@@ -1,4 +1,4 @@
-#include "AnaliticScreen.h"
+#include "TripsScreen.h"
 #include "Theme.h" // Wspólna paleta kolorów
 #include "Config.h"
 #include <SPI.h>
@@ -12,7 +12,7 @@ static constexpr uint8_t SD_MOSI = 49;
 static constexpr uint8_t SD_SCLK = 52;
 
 // Inicjalizuje kartę microSD przy starcie systemu lub ładuje dane przykładowe do podglądu
-void AnaliticScreen::initSdAndLoad(MotoState& state) {
+void TripsScreen::initSdAndLoad(MotoState& state) {
     // Tworzymy przykładowe 3 trasy na start, aby tabela od razu była czytelna podczas testów
     state.history[0] = { 3, 145, 168.4f, 4.9f, 70 };
     state.history[1] = { 2,  82,  94.2f, 5.2f, 68 };
@@ -24,7 +24,7 @@ void AnaliticScreen::initSdAndLoad(MotoState& state) {
     SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
     if (SD.begin(SD_CS)) {
         sdAvailable = true;
-        Serial.println("[AnaliticScreen] Karta microSD zamontowana poprawnie!");
+        Serial.println("[TripsScreen] Karta microSD zamontowana poprawnie!");
 
         // Jeśli plik CSV jeszcze nie istnieje, tworzymy go z wierszem nagłówkowym dla Excela
         if (!SD.exists("/historia_tras.csv")) {
@@ -36,12 +36,12 @@ void AnaliticScreen::initSdAndLoad(MotoState& state) {
         }
     } else {
         sdAvailable = false;
-        Serial.println("[AnaliticScreen] Brak karty microSD - historia dziala w pamieci RAM");
+        Serial.println("[TripsScreen] Brak karty microSD - historia dziala w pamieci RAM");
     }
 }
 
 // Dodaje nową zakończoną trasę na samą górę tabeli (przesuwając starsze w dół) i zapisuje na SD
-void AnaliticScreen::archiveCurrentTrip(MotoState& state, int durationMin, float distKm, float avgFuel, int avgSpeed) {
+void TripsScreen::archiveCurrentTrip(MotoState& state, int durationMin, float distKm, float avgFuel, int avgSpeed) {
     // Przesuwamy istniejące wpisy o 1 pozycję w dół (najstarszy 5. wpis wypada z widoku)
     for (int i = MotoState::MAX_HISTORY - 1; i > 0; i--) {
         state.history[i] = state.history[i - 1];
@@ -62,18 +62,18 @@ void AnaliticScreen::archiveCurrentTrip(MotoState& state, int durationMin, float
 }
 
 // Dopisuje pojedynczy wiersz danych w formacie CSV na kartę microSD
-void AnaliticScreen::saveToSdCsv(const TripRecord& rec) {
+void TripsScreen::saveToSdCsv(const TripRecord& rec) {
     File file = SD.open("/historia_tras.csv", FILE_APPEND);
     if (file) {
         file.printf("%d;%d;%.1f;%.1f;%d\n",
                     rec.id, rec.durationMin, rec.distanceKm, rec.avgFuel100, rec.avgSpeedKmh);
         file.close();
-        Serial.println("[AnaliticScreen] Zapisano trase #" + String(rec.id) + " na karte SD");
+        Serial.println("[TripsScreen] Zapisano trase #" + String(rec.id) + " na karte SD");
     }
 }
 
 // Zamienia łączną liczbę minut (np. 145) na czytelny format godzinowy ("02:25")
-String AnaliticScreen::formatDuration(int totalMinutes) {
+String TripsScreen::formatDuration(int totalMinutes) {
     int h = totalMinutes / 60;
     int m = totalMinutes % 60;
     char buf[10];
@@ -82,7 +82,7 @@ String AnaliticScreen::formatDuration(int totalMinutes) {
 }
 
 // Rysuje statyczny szkielet tabeli (nagłówek ekranu, belkę tytułów kolumn i legendę na dole)
-void AnaliticScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
+void TripsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     isDirty = true; // Wymusza narysowanie wierszy danych przy wejściu na ekran
     tft.fillScreen(BG_COLOR);
 
@@ -112,7 +112,7 @@ void AnaliticScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
 }
 
 // Rysuje 5 wierszy tabeli z danymi ostatnich tras (tylko gdy zaszła zmiana - zero migotania)
-void AnaliticScreen::update(TFT_eSPI& tft, const MotoState& state) {
+void TripsScreen::update(TFT_eSPI& tft, const MotoState& state) {
     if (!isDirty) return;
     isDirty = false;
 
@@ -158,7 +158,7 @@ void AnaliticScreen::update(TFT_eSPI& tft, const MotoState& state) {
 }
 
 // Długie przytrzymanie MODE archiwizuje bieżącą trasę do tabeli i na kartę SD
-bool AnaliticScreen::onModeLongPress(MotoState& state) {
+bool TripsScreen::onModeLongPress(MotoState& state) {
     // Wyliczamy przykładowy czas jazdy (np. na podstawie dystansu i średniej prędkości 65 km/h)
     float dist = (state.tripKm > 0.5f) ? state.tripKm : 42.5f; // Jeśli 0 km w teście, wpisuje próbkę 42.5 km
     int avgSpd = 65;
@@ -169,9 +169,9 @@ bool AnaliticScreen::onModeLongPress(MotoState& state) {
 }
 
 // Długie przytrzymanie ACTION czyści podgląd tabeli na ekranie
-bool AnaliticScreen::onActionLongPress(MotoState& state) {
+bool TripsScreen::onActionLongPress(MotoState& state) {
     state.historyCount = 0;
     isDirty = true;
-    Serial.println("[AnaliticScreen] Wyczyszczono tabele historii");
+    Serial.println("[TripsScreen] Wyczyszczono tabele historii");
     return true;
 }

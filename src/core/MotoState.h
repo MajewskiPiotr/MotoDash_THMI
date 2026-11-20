@@ -49,7 +49,7 @@ struct MotoState {
     
     // --- WYLICZENIA SPALANIA, DYSTANSU I ZASIĘGU ---
     float instFuel100       = 0.0f;  // Spalanie chwilowe [L/100km w ruchu lub L/h na postoju]
-    float overallAvgFuel100 = 5.1f;  // Średnie spalanie ogólne (długoterminowe) [L/100km]
+    float tankAvgFuel100 = 5.1f;  // Średnie spalanie od ostatniego tankowania do pełna [L/100km]
     float tripAvgFuel100    = 5.1f;  // Średnie spalanie z bieżącej wycieczki [L/100km]
     float tripKm            = 0.0f;  // Dystans bieżącej wycieczki [km]
     int   rangeKm           = 320;   // Szacowany zasięg na pozostałym paliwie w baku [km]

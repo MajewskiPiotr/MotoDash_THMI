@@ -3,7 +3,7 @@
 
 // Ekran prezentujący tabelę 5 ostatnich zakończonych tras (czas, dystans, średnie spalanie, średnia prędkość)
 // wraz z odczytem/zapisem do pliku CSV na karcie microSD.
-class AnaliticScreen : public Screen {
+class TripsScreen : public Screen {
 public:
     void initSdAndLoad(MotoState& state); // Inicjuje kartę SD i wczytuje 5 ostatnich tras przy starcie
     void archiveCurrentTrip(MotoState& state, int durationMin, float distKm, float avgFuel, int avgSpeed);

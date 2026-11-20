@@ -14,7 +14,7 @@ void FuelCalculator::init(MotoState& state) {
         // 1. Licznik bieżącego baku (Ekran 1)
         tankKm                  = prefs.getFloat("tankKm", 0.0f);   // Dystans od tankowania [km]
         tankFuelUsedL           = prefs.getFloat("tankUsed", 0.0f); // Paliwo zużyte od tankowania [L]
-        state.overallAvgFuel100 = prefs.getFloat("tankAvg", 5.1f);  // Średnie spalanie z obecnego baku [L/100km]
+        state.tankAvgFuel100 = prefs.getFloat("tankAvg", 5.1f);  // Średnie spalanie z obecnego baku [L/100km]
         tankBurnedL             = prefs.getFloat("tankBurn", -1.0f); // Paliwo spalone od tankowania do pełna [L]
         if (tankBurnedL < 0.0f) tankBurnedL = tankFuelUsedL;        // Pierwsze uruchomienie po aktualizacji
         tankAddedL              = prefs.getFloat("tankAdded", 0.0f); // Suma dolewek od tankowania do pełna [L]
@@ -34,7 +34,7 @@ void FuelCalculator::init(MotoState& state) {
         tankFuelUsedL           = max(0.0f, state.tankCapacityL - Config::TEST_FUEL_LEFT_L);
         tankBurnedL             = tankFuelUsedL;
         tankKm                  = tankBurnedL / Config::TEST_AVG_FUEL100 * 100.0f;
-        state.overallAvgFuel100 = Config::TEST_AVG_FUEL100;
+        state.tankAvgFuel100 = Config::TEST_AVG_FUEL100;
         tankAddedL              = 0.0f;
         tankFromFull            = true;  // Pozwala przetestować ekran kalibracji (komputer wyliczy 18 L przy baku 20 L)
         Serial.println("[FuelCalculator] TEST: ustawiono prawie pusty bak (" + String(Config::TEST_FUEL_LEFT_L, 1) + " L)");
@@ -44,7 +44,7 @@ void FuelCalculator::init(MotoState& state) {
     updateTankState(state);
 
     Serial.println("[FuelCalculator] Wczytano: Bak=" + String(tankKm, 1) + "km (" +
-                   String(state.overallAvgFuel100, 1) + "L), Wycieczka=" +
+                   String(state.tankAvgFuel100, 1) + "L), Wycieczka=" +
                    String(state.tripKm, 1) + "km (" + String(state.tripAvgFuel100, 1) + "L)");
 }
 
@@ -88,7 +88,7 @@ void FuelCalculator::update(MotoState& state) {
     // 4. Aktualizacja średniego spalania z obecnego baku (po przejechaniu min. 200 m od tankowania)
     if (tankKm > 0.2f) {
         // Liczymy ze spalonego paliwa, a nie z ubytku w baku (dolewanie nie może zaniżać średniej)
-        state.overallAvgFuel100 = (tankBurnedL / tankKm) * 100.0f;
+        state.tankAvgFuel100 = (tankBurnedL / tankKm) * 100.0f;
     }
 
     // 5. Aktualizacja średniego spalania z bieżącej wycieczki (po przejechaniu min. 200 m na wycieczce)
@@ -163,7 +163,7 @@ bool FuelCalculator::calibrateWithPump(MotoState& state, float pumpedL, float& o
 
     newF = constrain(oldF * ratio, Config::CAL_FACTOR_MIN, Config::CAL_FACTOR_MAX);
     state.fuelCalFactor      = newF;
-    state.overallAvgFuel100 *= newF / oldF; // Średnia od razu w nowej skali (zasięg po tankowaniu będzie trafniejszy)
+    state.tankAvgFuel100 *= newF / oldF; // Średnia od razu w nowej skali (zasięg po tankowaniu będzie trafniejszy)
 
     Preferences prefs;
     if (prefs.begin("motodash", false)) {
@@ -177,8 +177,8 @@ bool FuelCalculator::calibrateWithPump(MotoState& state, float pumpedL, float& o
 // Wspólne przeliczenie ilości paliwa w baku i zasięgu (używane po każdej zmianie licznika baku)
 void FuelCalculator::updateTankState(MotoState& state) {
     state.fuelInTankL = max(0.0f, state.tankCapacityL - tankFuelUsedL);
-    state.rangeKm = (state.overallAvgFuel100 > 0.5f)
-                    ? (int)((state.fuelInTankL / state.overallAvgFuel100) * 100.0f)
+    state.rangeKm = (state.tankAvgFuel100 > 0.5f)
+                    ? (int)((state.fuelInTankL / state.tankAvgFuel100) * 100.0f)
                     : 0;
 }
 
@@ -186,7 +186,7 @@ void FuelCalculator::updateTankState(MotoState& state) {
 void FuelCalculator::resetCurrentTrip(MotoState& state) {
     state.tripKm         = 0.0f;
     tripFuelUsedL        = 0.0f;
-    state.tripAvgFuel100 = state.overallAvgFuel100; // Na starcie nowej wycieczki przyjmuje średnią z baku
+    state.tripAvgFuel100 = state.tankAvgFuel100; // Na starcie nowej wycieczki przyjmuje średnią z baku
     saveToNvs(state);
     Serial.println("[FuelCalculator] Wyzerowano licznik pod nowa wycieczke!");
 }
@@ -201,7 +201,7 @@ void FuelCalculator::saveToNvs(const MotoState& state) {
         prefs.putFloat("tankBurn", tankBurnedL);
         prefs.putFloat("tankAdded", tankAddedL);
         prefs.putBool("tankFull", tankFromFull);
-        prefs.putFloat("tankAvg", state.overallAvgFuel100);
+        prefs.putFloat("tankAvg", state.tankAvgFuel100);
 
         prefs.putFloat("tripKm", state.tripKm);
         prefs.putFloat("tripFuel", tripFuelUsedL);

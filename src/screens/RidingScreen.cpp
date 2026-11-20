@@ -60,7 +60,7 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
     tft.setTextPadding(66);
     tft.drawString(String(state.instFuel100, 1), 172, 56, 4);
     tft.setTextColor(ACCENT_GREEN, CARD_COLOR);
-    tft.drawRightString(String(state.overallAvgFuel100, 1), 304, 56, 4);
+    tft.drawRightString(String(state.tankAvgFuel100, 1), 304, 56, 4);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
     tft.setTextPadding(60);
     tft.drawString(state.speedKmh > 3 ? "L/100km" : "L/h", 172, 88, 1); // Na postoju chwilowe w L/h

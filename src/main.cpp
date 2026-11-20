@@ -10,7 +10,7 @@
 #include "RidingScreen.h"
 #include "MotoStatsScreen.h"
 #include "SettingsScreen.h"
-#include "AnaliticScreen.h"
+#include "TripsScreen.h"
 #include "TouchHandler.h"
 #include "RefuelScreen.h"
 
@@ -29,7 +29,7 @@ RefuelScreen    refuelScreen(&fuelCalculator, &screenManager); // Nakładka (poz
 RidingScreen    ridingScreen(&fuelCalculator, &refuelScreen);
 MotoStatsScreen motoStatsScreen(&canReader);
 SettingsScreen  settingsScreen(&screenManager);
-AnaliticScreen  analiticScreen;
+TripsScreen  tripsScreen;
 
 void setup() {
     Serial.begin(115200);
@@ -48,7 +48,7 @@ void setup() {
     // 3. Rejestracja widoków w kolejności przełączania
     screenManager.registerScreen(&ridingScreen);
     screenManager.registerScreen(&motoStatsScreen);
-    screenManager.registerScreen(&analiticScreen);
+    screenManager.registerScreen(&tripsScreen);
     screenManager.registerScreen(&settingsScreen);
 
     // 4. Uruchomienie poszczególnych modułów sprzętowych i logiki
@@ -57,7 +57,7 @@ void setup() {
     tpmsScanner.init();
     fuelCalculator.init(motoState);
     buttonHandler.init(&motoState, &screenManager);
-    analiticScreen.initSdAndLoad(motoState);
+    tripsScreen.initSdAndLoad(motoState);
 
     // 5. Prawie pusty bak po uruchomieniu = prawdopodobnie jesteśmy na stacji -> pokaż ekran Tankowania
     if (motoState.fuelInTankL < Config::REFUEL_PROMPT_L) {
