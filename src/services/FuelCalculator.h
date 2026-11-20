@@ -17,7 +17,6 @@ public:
     // Porównuje litry z dystrybutora ze spalonym paliwem wg komputera i koryguje mnożnik kalibracji.
     // Zwraca true, jeśli mnożnik zmieniono (oldF/newF = wartość przed i po). Nie zeruje baku - po niej wywołaj resetRefuel().
     bool  calibrateWithPump(MotoState& state, float pumpedL, float& oldF, float& newF);
-    void resetOverall(MotoState& state);    // Zeruje licznik ogólny (długoterminowy)
 
 private:
     unsigned long lastCalcMs     = 0;     // Znacznik czasu ostatniego obliczenia [ms]
@@ -33,11 +32,6 @@ private:
 
     // 2. Licznik bieżącej wycieczki (przetrwa postoje na kawę -> Ekran 3)
     float tripFuelUsedL          = 0.0f;  // Paliwo zużyte podczas bieżącej wycieczki [L]
-
-
-    // 3. Licznik ogólny (długoterminowy)
-    float overallKm              = 0.0f;  // Całkowity dystans zliczony przez komputer [km]
-    float overallFuelUsedL       = 0.0f;  // Całkowite zużyte paliwo [L]
 
     void saveToNvs(const MotoState& state); // Zapisuje komplet liczników do nieulotnej pamięci Flash
     void updateTankState(MotoState& state); // Przelicza paliwo w baku i zasięg na podstawie tankFuelUsedL

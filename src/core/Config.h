@@ -4,8 +4,8 @@
 // Przestrzeń nazw grupująca wszystkie stałe sprzętowe i parametry motocykla
 namespace Config {
     // --- PINY SPRZĘTOWE ---
-constexpr uint8_t PIN_PWR_EN     = 10; // Główny klucz zasilania płytki T-HMI
-constexpr uint8_t PIN_TFT_BL     = 38; // Fizyczny pin podświetlenia ekranu w LilyGO T-HMI
+    constexpr uint8_t PIN_PWR_EN       = 10; // Główny klucz zasilania płytki T-HMI
+    constexpr uint8_t PIN_TFT_BL       = 38; // Fizyczny pin podświetlenia ekranu w LilyGO T-HMI
 
     constexpr uint8_t PIN_I2C_SDA      = 43; // Linia danych magistrali Grove I2C (termometr/barometr)
     constexpr uint8_t PIN_I2C_SCL      = 44; // Linia zegara magistrali Grove I2C

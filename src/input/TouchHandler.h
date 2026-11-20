@@ -22,7 +22,6 @@ private:
     // Minimalna długość ruchu palcem (w surowych jednostkach dotyku), aby uznać gest za przesunięcie
     static constexpr int SWIPE_THRESHOLD = 450;
 
-    SPIClass touchSpi = SPIClass(HSPI); // Wydzielona magistrala SPI dla kontrolera dotyku
     XPT2046_Touchscreen ts = XPT2046_Touchscreen(TOUCH_CS, TOUCH_IRQ);
 
     bool isTouching = false; // Czy palec aktualnie dotyka ekranu

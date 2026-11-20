@@ -4,29 +4,19 @@
 #include "BootLogo.h" // Dołączamy plik z naszą grafiką startową
 
 void ScreenManager::init() {
-    pinMode(10, OUTPUT);
-    digitalWrite(10, HIGH); // 1. Włącza zasilanie 3.3V matrycy (PWR_EN)
-
+    pinMode(Config::PIN_PWR_EN, OUTPUT);
+    digitalWrite(Config::PIN_PWR_EN, HIGH); // 1. Włącza zasilanie 3.3V matrycy (PWR_EN)
     delay(100);
 
-    tft.init();             // 2. Inicjalizuje sterownik ST7789
+    tft.init();               // 2. Inicjalizuje sterownik ST7789
     tft.invertDisplay(false); // Naprawia wyblakłe/odwrócone kolory matrycy (jeśli bez zmian, wpisz 'true')
-        tft.setRotation(1);     // Orientacja pozioma 320x240
-    tft.setSwapBytes(true);   // 5. Wymagane dla pushImage(), aby kolory R i B nie były zamienione miejscami
+    tft.setRotation(1);       // Orientacja pozioma 320x240
+    tft.setSwapBytes(true);   // Wymagane dla pushImage(), aby kolory R i B nie były zamienione miejscami
 
-    pinMode(38, OUTPUT);
-    digitalWrite(38, HIGH); // 3. Włącza podświetlenie LED ekranu (GPIO 38)
-      // --- WYŚWIETLENIE EKRANU POWITALNEGO ---
-    tft.fillScreen(TFT_BLACK); // Czyści ekran na czarno (idealne tło pod logo)
+    pinMode(Config::PIN_TFT_BL, OUTPUT);
+    digitalWrite(Config::PIN_TFT_BL, HIGH); // 3. Włącza podświetlenie LED ekranu
 
-    // Wyśrodkowuje grafikę na ekranie (dla 320x240 będzie to punkt X=0, Y=0)
-    int posX = (320 - LOGO_WIDTH) / 2;
-    int posY = (240 - LOGO_HEIGHT) / 2;
-
-    // Rysuje cały obrazek z pamięci Flash w ułamku sekundy
-    // tft.pushImage(posX, posY, LOGO_WIDTH, LOGO_HEIGHT, bootLogo);
-
-    // delay(1800); // Wyświetla logo przez 1.8 sekundy przed przejściem do Ekranu
+    tft.fillScreen(TFT_BLACK); // Czarne tło pod animację powitalną (playBootAnimation)
 }
 // Cofnięcie do poprzedniego ekranu (wywoływane przy przesunięciu palcem w prawo)
 void ScreenManager::prevScreen(MotoState& state) {
