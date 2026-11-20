@@ -17,6 +17,8 @@ public:
     bool onModeLongPress(MotoState& state) override;   // Przytrzymanie MODE zapisuje bieżącą trasę do tabeli i zeruje licznik wycieczki
     bool onActionLongPress(MotoState& state) override; // Przytrzymanie ACTION czyści historię tabeli
 
+    bool hasSd() const { return sdAvailable; }         // Czy karta microSD działa (np. do pobrania CSV przez Wi-Fi)
+
 private:
     FuelCalculator* fuelCalculator; // Zeruje licznik wycieczki po jej zapisaniu do tabeli
     bool sdAvailable = false; // Informuje, czy karta microSD jest włożona i gotowa do zapisu

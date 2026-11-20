@@ -27,6 +27,14 @@ namespace Config {
     constexpr float CAL_FACTOR_MIN   = 0.70f; // Dopuszczalny zakres mnożnika kalibracji
     constexpr float CAL_FACTOR_MAX   = 1.30f;
 
+    // --- HOTSPOT WI-FI (ekran 5) ---
+    constexpr const char* WIFI_AP_SSID = "MotoDash";    // Nazwa sieci widoczna w telefonie
+    constexpr const char* WIFI_AP_PASS = "motodash123"; // Hasło (min. 8 znaków) - zmień na własne
+    // Automatyczne wyłączenie hotspotu po ruszeniu. Na razie WYŁĄCZONE, bo symulacja CAN zawsze
+    // podaje prędkość > 0. Po podłączeniu prawdziwego CAN ustaw true.
+    constexpr bool  WIFI_OFF_WHEN_RIDING = false;
+    constexpr int   WIFI_OFF_SPEED_KMH   = 10;
+
     // --- DANE TESTOWE ---
     // true = przy każdym starcie w baku zostaje TEST_FUEL_LEFT_L litrów (do testu automatycznego ekranu Tankowania).
     // PRZED JAZDĄ USTAW false, inaczej po każdym uruchomieniu stan baku będzie nadpisywany!

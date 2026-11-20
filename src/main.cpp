@@ -13,6 +13,8 @@
 #include "TripsScreen.h"
 #include "TouchHandler.h"
 #include "RefuelScreen.h"
+#include "WifiPortal.h"
+#include "WifiScreen.h"
 
 // --- INSTANCJE GLOBALNE SERWISÓW I MODELU STANU ---
 MotoState       motoState;
@@ -30,6 +32,8 @@ RidingScreen    ridingScreen(&fuelCalculator, &refuelScreen);
 MotoStatsScreen motoStatsScreen(&canReader);
 SettingsScreen  settingsScreen(&screenManager);
 TripsScreen     tripsScreen(&fuelCalculator);
+WifiPortal      wifiPortal;
+WifiScreen      wifiScreen(&wifiPortal);
 
 void setup() {
     Serial.begin(115200);
@@ -50,6 +54,7 @@ void setup() {
     screenManager.registerScreen(&motoStatsScreen);
     screenManager.registerScreen(&tripsScreen);
     screenManager.registerScreen(&settingsScreen);
+    screenManager.registerScreen(&wifiScreen);
 
     // 4. Uruchomienie poszczególnych modułów sprzętowych i logiki
     canReader.init();
@@ -58,6 +63,7 @@ void setup() {
     fuelCalculator.init(motoState);
     buttonHandler.init(&motoState, &screenManager);
     tripsScreen.initSdAndLoad(motoState);
+    wifiPortal.init(&motoState, &settingsScreen, &tripsScreen); // Hotspot startuje dopiero z ekranu Wi-Fi
 
     // 5. Prawie pusty bak po uruchomieniu = prawdopodobnie jesteśmy na stacji -> pokaż ekran Tankowania
     if (motoState.fuelInTankL < Config::REFUEL_PROMPT_L) {
@@ -78,6 +84,9 @@ void loop() {
     // 3. Przeliczenie spalania i zasięgu na podstawie nowych odczytów
     fuelCalculator.update(motoState);
 
-    // 4. Odświeżenie aktualnie wybranego widoku na ekranie
+    // 4. Obsługa strony WWW, gdy hotspot jest włączony
+    wifiPortal.update();
+
+    // 5. Odświeżenie aktualnie wybranego widoku na ekranie
     screenManager.render(motoState);
 }
