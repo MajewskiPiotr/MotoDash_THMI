@@ -1,15 +1,7 @@
 #include "TripsScreen.h"
 #include "Theme.h" // Wspólna paleta kolorów
 #include "Config.h"
-#include <SPI.h>
-#include <SD.h> // Wbudowana biblioteka ESP32 do obsługi karty pamięci microSD
-
-
-// Piny czytnika kart microSD na płytce LilyGO T-HMI
-static constexpr uint8_t SD_CS   = 51;
-static constexpr uint8_t SD_MISO = 50;
-static constexpr uint8_t SD_MOSI = 49;
-static constexpr uint8_t SD_SCLK = 52;
+#include <SD_MMC.h> // Wbudowana biblioteka ESP32 do kart microSD w trybie SD_MMC (tak podłączony jest slot T-HMI)
 
 // Inicjalizuje kartę microSD przy starcie systemu lub ładuje dane przykładowe do podglądu
 void TripsScreen::initSdAndLoad(MotoState& state) {
@@ -21,14 +13,15 @@ void TripsScreen::initSdAndLoad(MotoState& state) {
     state.nextTripId   = 4;
 
     // Próba uruchomienia karty microSD (jeśli jest włożona w slot T-HMI)
-    SPI.begin(SD_SCLK, SD_MISO, SD_MOSI, SD_CS);
-    if (SD.begin(SD_CS)) {
+    // Slot T-HMI działa w trybie SD_MMC 1-bit (piny w Config.h). Nie używamy SPI - ta magistrala obsługuje dotyk.
+    SD_MMC.setPins(Config::PIN_SD_CLK, Config::PIN_SD_CMD, Config::PIN_SD_D0);
+    if (SD_MMC.begin("/sdcard", true /* tryb 1-bit */, false, Config::SD_FREQ_KHZ)) {
         sdAvailable = true;
         Serial.println("[TripsScreen] Karta microSD zamontowana poprawnie!");
 
         // Jeśli plik CSV jeszcze nie istnieje, tworzymy go z wierszem nagłówkowym dla Excela
-        if (!SD.exists("/historia_tras.csv")) {
-            File file = SD.open("/historia_tras.csv", FILE_WRITE);
+        if (!SD_MMC.exists("/historia_tras.csv")) {
+            File file = SD_MMC.open("/historia_tras.csv", FILE_WRITE);
             if (file) {
                 file.println("Nr_Trasy;Czas_min;Dystans_km;Srednie_spalanie_L100;Srednia_predkosc_kmh");
                 file.close();
@@ -63,7 +56,7 @@ void TripsScreen::archiveCurrentTrip(MotoState& state, int durationMin, float di
 
 // Dopisuje pojedynczy wiersz danych w formacie CSV na kartę microSD
 void TripsScreen::saveToSdCsv(const TripRecord& rec) {
-    File file = SD.open("/historia_tras.csv", FILE_APPEND);
+    File file = SD_MMC.open("/historia_tras.csv", FILE_APPEND);
     if (file) {
         file.printf("%d;%d;%.1f;%.1f;%d\n",
                     rec.id, rec.durationMin, rec.distanceKm, rec.avgFuel100, rec.avgSpeedKmh);

@@ -9,6 +9,11 @@ namespace Config {
 
     constexpr uint8_t PIN_I2C_SDA      = 43; // Linia danych magistrali Grove I2C (termometr/barometr)
     constexpr uint8_t PIN_I2C_SCL      = 44; // Linia zegara magistrali Grove I2C
+    // Czytnik microSD na płytce T-HMI (tryb SD_MMC 1-bit, nie SPI)
+    constexpr uint8_t PIN_SD_CLK       = 12;
+    constexpr uint8_t PIN_SD_CMD       = 11;
+    constexpr uint8_t PIN_SD_D0        = 13;
+    constexpr int     SD_FREQ_KHZ      = 20000; // Domyślne 40 MHz bywa za szybkie dla T-HMI - karta nie jest wykrywana
     constexpr uint8_t PIN_BTN_MODE     = 15; // Niebieski przycisk nawigacji (GPIO 15)
     constexpr uint8_t PIN_BTN_ACTION   = 16; // Czerwony przycisk akcji (GPIO 16)
 
