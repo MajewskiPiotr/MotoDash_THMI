@@ -36,7 +36,7 @@ void FuelCalculator::init(MotoState& state) {
         tankKm                  = tankBurnedL / Config::TEST_AVG_FUEL100 * 100.0f;
         state.overallAvgFuel100 = Config::TEST_AVG_FUEL100;
         tankAddedL              = 0.0f;
-        tankFromFull            = false; // Dane sztuczne - nie nadają się do kalibracji
+        tankFromFull            = true;  // Pozwala przetestować ekran kalibracji (komputer wyliczy 18 L przy baku 20 L)
         Serial.println("[FuelCalculator] TEST: ustawiono prawie pusty bak (" + String(Config::TEST_FUEL_LEFT_L, 1) + " L)");
     }
 
