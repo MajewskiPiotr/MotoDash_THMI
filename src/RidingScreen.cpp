@@ -1,25 +1,25 @@
 #include "RidingScreen.h"
 #include "Config.h"
 
-// Paleta kolorĂłw w formacie RGB565
-#define BG_COLOR     0x0841 // Ciemny grafit (tĹ‚o gĹ‚Ăłwne)
-#define CARD_COLOR   0x10A3 // Ciemnoszary (wnÄ™trze kafelkĂłw)
-#define BORDER_COLOR 0x2965 // Szary (obramowania kafelkĂłw)
+// Paleta kolorów w formacie RGB565
+#define BG_COLOR     0x0841 // Ciemny grafit (tło główne)
+#define CARD_COLOR   0x10A3 // Ciemnoszary (wnętrze kafelków)
+#define BORDER_COLOR 0x2965 // Szary (obramowania kafelków)
 #define TEXT_MUTED   0x8C71 // Przygaszony jasnoszary (etykiety)
-#define ACCENT_GREEN 0x07E0 // Zielony (napiÄ™cie akumulatora, poprawne ciĹ›nienie)
-#define ACCENT_BLUE  0x05FF // BĹ‚Ä™kitny (zasiÄ™g oraz ostrzeĹĽenie o goĹ‚oledzi)
-#define ACCENT_RED   0xF800 // Czerwony (alarm przegrzania silnika lub spadku ciĹ›nienia opon)
+#define ACCENT_GREEN 0x07E0 // Zielony (napięcie akumulatora, poprawne ciśnienie)
+#define ACCENT_BLUE  0x05FF // Błękitny (zasięg oraz ostrzeżenie o gołoledzi)
+#define ACCENT_RED   0xF800 // Czerwony (alarm przegrzania silnika lub spadku ciśnienia opon)
 
-// Rysuje statyczny ukĹ‚ad kafelkĂłw (wywoĹ‚ywane raz przy wejĹ›ciu na Ekran 1)
+// Rysuje statyczny układ kafelków (wywoływane raz przy wejściu na Ekran 1)
 void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.fillScreen(BG_COLOR);
 
-    // NagĹ‚Ăłwek ekranu w lewym gĂłrnym rogu
+    // Nagłówek ekranu w lewym górnym rogu
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
     tft.drawString("TRYB JAZDY", 10, 6, 1);
 
-    // --- GĂ“RNY RZÄ„D (2 duĹĽe kafelki po 148 px szerokoĹ›ci) ---
-    // Lewy gĂłrny: Temperatura silnika
+    // --- GÓRNY RZĄD (2 duże kafelki po 148 px szerokości) ---
+    // Lewy górny: Temperatura silnika
     tft.fillRoundRect(8, 22, 148, 84, 7, CARD_COLOR);
     tft.drawRoundRect(8, 22, 148, 84, 7, BORDER_COLOR);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
@@ -33,7 +33,7 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.drawRightString("SREDNIE", 304, 42, 1);
     tft.drawRightString("L/100km", 304, 88, 1);
 
-    // --- ĹšRODKOWY RZÄ„D ---
+    // --- ŚRODKOWY RZĄD ---
     // Lewy dolny (podzielony na 2 mniejsze kafelki po 71 px: Akumulator + Otoczenie)
     tft.fillRoundRect(8, 112, 71, 78, 7, CARD_COLOR);
     tft.drawRoundRect(8, 112, 71, 78, 7, BORDER_COLOR);
@@ -49,14 +49,14 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.drawString("PALIWO / ZASIEG", 172, 120, 1);
 
     // --- DOLNA BELKA (Y: 196..234) ---
-    // CiĹ›nienie i temperatura opon (TPMS)
+    // Ciśnienie i temperatura opon (TPMS)
     tft.fillRoundRect(8, 196, 304, 38, 7, CARD_COLOR);
     tft.drawRoundRect(8, 196, 304, 38, 7, BORDER_COLOR);
 }
 
-// OdĹ›wieĹĽa dynamiczne wartoĹ›ci liczbowe w pÄ™tli gĹ‚Ăłwnej
+// Odświeża dynamiczne wartości liczbowe w pętli głównej
 void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
-    // 1. Temperatura silnika (duĹĽa czcionka nr 6 - same wyraĹşne cyfry + symbol C)
+    // 1. Temperatura silnika (duża czcionka nr 6 - same wyraźne cyfry + symbol C)
     uint16_t tCol = (state.engineTempC > Config::ENGINE_TEMP_WARN) ? ACCENT_RED : TFT_WHITE;
     tft.setTextColor(tCol, CARD_COLOR);
     tft.setTextPadding(130);
@@ -73,12 +73,12 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
     tft.drawString(state.speedKmh > 3 ? "L/100km" : "L/h", 172, 88, 1); // Na postoju chwilowe w L/h
     tft.setTextPadding(0);
 
-    // 3. Akumulator (wyĹ›rodkowany w lewym kafelku)
+    // 3. Akumulator (wyśrodkowany w lewym kafelku)
     tft.setTextColor(ACCENT_GREEN, CARD_COLOR);
     tft.setTextPadding(60);
     tft.drawCentreString(String(state.voltageV, 1) + "V", 43, 148, 2);
 
-    // 4. Temperatura otoczenia (wyĹ›rodkowana, bĹ‚Ä™kitna poniĹĽej 3.0Â°C)
+    // 4. Temperatura otoczenia (wyśrodkowana, błękitna poniżej 3.0°C)
     uint16_t ambCol = (state.ambientTempC < 3.0f) ? ACCENT_BLUE : TFT_WHITE;
     tft.setTextColor(ambCol, CARD_COLOR);
     tft.setTextPadding(60);
@@ -108,7 +108,7 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
     tft.drawString("R: " + String(state.rearBar, 1) + "b (" + String(state.rearTempC) + "C)", 170, 208, 2);
 }
 
-// DĹ‚ugie przytrzymanie przycisku ACTION na ekranie jazdy resetuje paliwo po tankowaniu
+// Długie przytrzymanie przycisku ACTION na ekranie jazdy resetuje paliwo po tankowaniu
 bool RidingScreen::onActionLongPress(MotoState& state) {
     if (fuelCalculator) {
         fuelCalculator->resetRefuel(state);

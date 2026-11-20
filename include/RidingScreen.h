@@ -3,16 +3,16 @@
 #include "FuelCalculator.h"
 #include "RefuelScreen.h"
 
-// Ekran 1: GĹ‚Ăłwny tryb jazdy (bieg, temperatura, napiÄ™cie, spalanie, zasiÄ™g, TPMS).
+// Ekran 1: Główny tryb jazdy (bieg, temperatura, napięcie, spalanie, zasięg, TPMS).
 class RidingScreen : public Screen {
 public:
-    // Konstruktor przyjmujÄ…cy wskaĹşnik na kalkulator paliwa (Dependency Injection)
+    // Konstruktor przyjmujący wskaźnik na kalkulator paliwa (Dependency Injection)
     RidingScreen(FuelCalculator* fuelCalc, RefuelScreen* refuel)
         : fuelCalculator(fuelCalc), refuelScreen(refuel) {}
 
     void onEnter(TFT_eSPI& tft, const MotoState& state) override;
     void update(TFT_eSPI& tft, const MotoState& state) override;
-    bool onActionLongPress(MotoState& state) override; // ObsĹ‚uga resetu po tankowaniu
+    bool onActionLongPress(MotoState& state) override; // Obsługa resetu po tankowaniu
     bool onActionDoubleClick(MotoState& state) override; // Podwójne kliknięcie ACTION otwiera ekran Tankowania
 
 private:

@@ -11,29 +11,29 @@ void ButtonHandler::init(MotoState* statePtr, ScreenManager* screenMgrPtr) {
     pinMode(Config::PIN_BTN_MODE, INPUT_PULLUP);
     pinMode(Config::PIN_BTN_ACTION, INPUT_PULLUP);
 
-    // --- KRĂ“TKIE KLIKNIÄCIE PRZYCISKU MODE ---
+    // --- KRÓTKIE KLIKNIĘCIE PRZYCISKU MODE ---
     btnMode.attachClick([]() {
         if (!s_state || !s_screenMgr) return;
         Screen* active = s_screenMgr->getActiveScreen();
-        // Najpierw pytamy aktywny ekran (np. SettingsScreen), czy chce przejÄ…Ä‡ klikniÄ™cie.
-        // JeĹ›li zwrĂłci false, przeĹ‚Ä…czamy na kolejny ekran w karuzeli.
+        // Najpierw pytamy aktywny ekran (np. SettingsScreen), czy chce przejąć kliknięcie.
+        // Jeśli zwróci false, przełączamy na kolejny ekran w karuzeli.
         if (active && active->onModeClick(*s_state)) return;
         s_screenMgr->nextScreen(*s_state);
     });
 
-    // --- DĹUGIE PRZYTRZYMANIE PRZYCISKU MODE ---
+    // --- DŁUGIE PRZYTRZYMANIE PRZYCISKU MODE ---
     btnMode.attachLongPressStart([]() {
         if (!s_state || !s_screenMgr) return;
         Screen* active = s_screenMgr->getActiveScreen();
         if (active) active->onModeLongPress(*s_state);
     });
 
-    // --- KRĂ“TKIE KLIKNIÄCIE PRZYCISKU ACTION ---
+    // --- KRÓTKIE KLIKNIĘCIE PRZYCISKU ACTION ---
     btnAction.attachClick([]() {
         if (!s_state || !s_screenMgr) return;
         Screen* active = s_screenMgr->getActiveScreen();
-        // JeĹ›li aktywny ekran (np. SettingsScreen) obsĹ‚uĹĽy klikniÄ™cie (+), koĹ„czymy.
-        // W przeciwnym razie wykonujemy akcjÄ™ globalnÄ… (zmiana jasnoĹ›ci DzieĹ„ / Noc).
+        // Jeśli aktywny ekran (np. SettingsScreen) obsłuży kliknięcie (+), kończymy.
+        // W przeciwnym razie wykonujemy akcję globalną (zmiana jasności Dzień / Noc).
         if (active && active->onActionClick(*s_state)) return;
 
         s_state->nightBrightness = !s_state->nightBrightness;
@@ -59,7 +59,7 @@ void ButtonHandler::init(MotoState* statePtr, ScreenManager* screenMgrPtr) {
         }
     });
 
-    // --- DĹUGIE PRZYTRZYMANIE PRZYCISKU ACTION ---
+    // --- DŁUGIE PRZYTRZYMANIE PRZYCISKU ACTION ---
     btnAction.attachLongPressStart([]() {
         if (!s_state || !s_screenMgr) return;
         Screen* active = s_screenMgr->getActiveScreen();
@@ -68,7 +68,7 @@ void ButtonHandler::init(MotoState* statePtr, ScreenManager* screenMgrPtr) {
 }
 
 void ButtonHandler::tick() {
-    // Sprawdza stan obu przyciskĂłw w kaĹĽdym obiegu pÄ™tli gĹ‚Ăłwnej
+    // Sprawdza stan obu przycisków w każdym obiegu pętli głównej
     btnMode.tick();
     btnAction.tick();
 }

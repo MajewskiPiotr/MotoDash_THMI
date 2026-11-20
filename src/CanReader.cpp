@@ -7,11 +7,11 @@ void CanReader::init() {
 }
 
 void CanReader::update(MotoState& state) {
-    // Ograniczamy czÄ™stotliwoĹ›Ä‡ zapytaĹ„ do 5 razy na sekundÄ™ (co 200 ms)
+    // Ograniczamy częstotliwość zapytań do 5 razy na sekundę (co 200 ms)
     if (millis() - lastPollMs < 200) return;
     lastPollMs = millis();
 
-    // Symulacja pracy silnika na potrzeby testĂłw w symulatorze Wokwi
+    // Symulacja pracy silnika na potrzeby testów w symulatorze Wokwi
     state.rpm += random(-300, 600);
     if (state.rpm > 10200) state.rpm = 4500;
     if (state.rpm < 1500)  state.rpm = 3500;
@@ -25,7 +25,7 @@ void CanReader::update(MotoState& state) {
 if (state.speedKmh > state.maxSpeedKmh) {
     state.maxSpeedKmh = state.speedKmh;
 }
-    // Ĺšledzenie wartoĹ›ci szczytowych dla Ekranu 2 (Statystyki Motocykla)
+    // Śledzenie wartości szczytowych dla Ekranu 2 (Statystyki Motocykla)
     if (state.rpm > state.maxRpm) {
         state.maxRpm = state.rpm;
     }
