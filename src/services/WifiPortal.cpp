@@ -2,6 +2,9 @@
 #include "Config.h"
 #include "SettingsScreen.h"
 #include "TripsScreen.h"
+#include "RefuelLog.h"
+#include "FuelCalculator.h"
+#include <sys/time.h>
 #include <WiFi.h>
 #include <SD_MMC.h>
 
@@ -33,9 +36,25 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  .msg{margin-top:10px;color:#3c3}
  .hide{display:none}
  .red{color:#f44}.yel{color:#fe4}.grn{color:#3e5}.blu{color:#3cf}
+ .tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+ .sub{font-size:12px;color:#8c99a6;margin-top:4px}
+ h2{font-size:15px;margin:18px 0 8px;color:#c3c2b7;font-weight:600}
+ .legend{display:flex;gap:14px;font-size:13px;color:#c3c2b7;margin-bottom:6px;flex-wrap:wrap}
+ .sw{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+ .scroll{overflow-x:auto}
+ #rt th,#rt td{padding:7px 5px;white-space:nowrap;font-size:12.5px}
+ #rt th:nth-child(2),#rt td:nth-child(2){text-align:left}
+ #rt tr.tank td{border-top:1px solid #2a3240;border-bottom:0;font-weight:600}
+ #rt tr.ev td{color:#c3c2b7;font-size:12px;border-bottom:0;padding-top:3px;padding-bottom:3px}
+ #rt tr.ev td:first-child{padding-left:14px}
+ .tag{display:inline-block;padding:1px 6px;border-radius:5px;font-size:11px;font-weight:600}
+ .t-full{background:#12324a;color:#8fd0ff}.t-top{background:#3a2a12;color:#ffc477}
+ .t-skip{background:#3a1a1a;color:#ff9a9a}.t-open{background:#22302a;color:#8fe0b0}.t-nm{background:#2a2a2a;color:#bbb}
+ .muted{color:#8c99a6}.note{font-size:12px;color:#8c99a6;margin-top:10px;line-height:1.5}
+ .tip{position:fixed;pointer-events:none;background:#0b0d10;border:1px solid #2a3240;border-radius:8px;padding:8px 10px;font-size:13px;display:none;z-index:5}
 </style></head><body>
 <header>MotoDash</header>
-<nav><button id="b0" class="on" onclick="tab(0)">Stan</button><button id="b1" onclick="tab(1)">Trasy</button><button id="b2" onclick="tab(2)">Ustawienia</button></nav>
+<nav><button id="b0" class="on" onclick="tab(0)">Stan</button><button id="b1" onclick="tab(1)">Trasy</button><button id="b3" onclick="tab(3)">Tankowania</button><button id="b2" onclick="tab(2)">Ustawienia</button></nav>
 <main>
 <section id="t0"><div class="grid">
  <div class="card"><div class="lbl">Paliwo w baku</div><div class="val" id="fuel">-</div></div>
@@ -53,6 +72,20 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  <table><thead><tr><th>#</th><th>Czas</th><th>km</th><th>L/100</th><th>km/h</th></tr></thead><tbody id="trips"></tbody></table>
  <a class="btn" href="/trasy.csv">Pobierz CSV</a>
 </div></section>
+<section id="t3" class="hide">
+ <div class="tiles">
+  <div class="card"><div class="lbl">Mnoznik kalibracji</div><div class="val" id="rf">-</div><div class="sub" id="rf0"></div></div>
+  <div class="card"><div class="lbl">Spalanie z dystrybutora</div><div class="val" id="rreal">-</div><div class="sub" id="rreal0">srednia z 3 ostatnich bakow</div></div>
+  <div class="card"><div class="lbl">Biezacy okres</div><div class="val" id="ropen">-</div><div class="sub" id="ropen0"></div></div>
+ </div>
+ <h2>Szacunek komputera a spalanie z przeliczenia</h2>
+ <div class="card"><div class="legend"><span><span class="sw" style="background:#3987e5"></span>Szacunek komputera</span><span><span class="sw" style="background:#d95926"></span>Z przeliczenia (dystrybutor)</span><span class="muted">przygaszone = bak pominiety</span></div>
+ <svg id="rc" viewBox="0 0 700 262" width="100%" role="img" aria-label="Spalanie: szacunek a przeliczenie"></svg><div class="muted" id="rcEmpty"></div></div>
+ <h2>Baki i tankowania</h2>
+ <div class="card scroll"><table id="rt"><thead><tr><th>Bak / tankowanie</th><th>Okres</th><th>km</th><th>Litry</th><th>Szacunek<br>L/100</th><th>Przeliczenie<br>L/100</th><th>Roznica</th><th>Mnoznik</th></tr></thead><tbody id="rtb"></tbody></table>
+ <a class="btn" href="/tankowania.csv">Pobierz CSV</a>
+ <div class="note">Przeliczenie = (litry przy "do pelna" + dolewki z okresu) / km okresu x 100. Mnoznik: srednia wazona litrami z 3 ostatnich waznych bakow; bak z roznica powyzej 30% jest pomijany.</div></div>
+</section>
 <section id="t2" class="hide"><div class="card"><form id="f" onsubmit="save();return false">
  <label>Mnoznik kalibracji spalania (0.70 - 1.30)</label><input name="cal" type="number" step="0.01" min="0.7" max="1.3">
  <label>Pojemnosc baku [L] (10 - 30)</label><input name="tank" type="number" step="0.5" min="10" max="30">
@@ -62,10 +95,11 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  <button class="btn" type="submit">Zapisz</button><div class="msg" id="msg"></div>
 </form></div></section>
 </main>
+<div class="tip" id="tip"></div>
 <script>
 let filled=false;
 function $(i){return document.getElementById(i)}
-function tab(n){for(let i=0;i<3;i++){$('t'+i).classList.toggle('hide',i!=n);$('b'+i).classList.toggle('on',i==n)}if(n==1)trips()}
+function tab(n){for(let i=0;i<4;i++){$('t'+i).classList.toggle('hide',i!=n);$('b'+i).classList.toggle('on',i==n)}if(n==1)trips();if(n==3)refuels()}
 function u(v,un){return v+' <span class="unit">'+un+'</span>'}
 async function status(){try{const d=await (await fetch('/api/status')).json();
  const r=d.fuel/d.cap;$('fuel').innerHTML=u(d.fuel.toFixed(1),'/ '+d.cap.toFixed(1)+' L');$('fuel').className='val '+(r<0.1?'red':r<0.25?'yel':'');
@@ -83,6 +117,39 @@ async function trips(){try{const d=await (await fetch('/api/trips')).json();
 }catch(e){}}
 async function save(){const b=new URLSearchParams(new FormData($('f')));
  try{const r=await fetch('/api/settings',{method:'POST',body:b});$('msg').textContent=r.ok?'Zapisano w MotoDash':'Blad zapisu';filled=false;status()}catch(e){$('msg').textContent='Brak polaczenia'}}
+const f1=(v,d=1)=>v.toFixed(d).replace('.',',');
+function dt(t,full){if(!t)return '\u2014';const d=new Date(t*1000),p=x=>String(x).padStart(2,'0');return p(d.getDate())+'.'+p(d.getMonth()+1)+(full?' '+p(d.getHours())+':'+p(d.getMinutes()):'')}
+async function refuels(){try{const d=await (await fetch('/api/refuels')).json();
+ $('rf').textContent=f1(d.factor,2);
+ const ok=d.tanks.filter(t=>t.s==0).slice(0,3),sr=ok.reduce((a,t)=>a+t.real,0),sk=ok.reduce((a,t)=>a+t.km,0);
+ $('rreal').innerHTML=sk>0?u(f1(sr/sk*100,2),'L/100'):'\u2014';
+ if(d.tanks.length){const first=d.tanks[d.tanks.length-1];$('rf0').textContent='byl '+f1(first.f0,2)+' przed bakiem '+first.n}
+ const o=d.open;$('ropen').innerHTML=u(Math.round(o.km),'km');
+ $('ropen0').textContent='od "do pelna" '+dt(o.st)+', '+(o.tn?('dolewki: '+o.tn+'x, '+f1(o.tl)+' L'):'bez dolewek');
+ const tg={0:'<span class="tag t-full">do pelna</span>',1:'<span class="tag t-top">dolewka</span>',2:'<span class="tag t-nm">do pelna, bez litrow</span>'};
+ let r='<tr class="tank"><td><span class="tag t-open">trwa</span> bak '+o.n+'</td><td>od '+dt(o.st)+'</td><td>'+Math.round(o.km)+'</td><td class="muted">\u2014</td><td>'+(o.km>0.2?f1(o.est/o.km*100,2):'\u2014')+'</td><td class="muted">\u2014</td><td></td><td>'+f1(d.factor,2)+'</td></tr>';
+ for(const e of [...o.ev].reverse())r+='<tr class="ev"><td>'+tg[e.y]+' '+dt(e.t,1)+'</td><td></td><td class="muted">'+Math.round(e.o)+' km</td><td>'+f1(e.l)+' L</td><td></td><td></td><td></td><td></td></tr>';
+ for(const t of d.tanks){const meas=t.real>0,diff=meas?(t.real/t.est-1)*100:0,
+   st=t.s==1?' <span class="tag t-skip">pominiety</span>':t.s==2?' <span class="tag t-nm">bez pomiaru</span>':'';
+  r+='<tr class="tank"><td>Bak '+t.n+st+'</td><td>'+dt(t.st)+' \u2013 '+dt(t.et)+'</td><td>'+Math.round(t.km)+'</td><td>'+(meas?f1(t.real):'\u2014')+'</td><td>'+(t.km>0.2?f1(t.est/t.km*100,2):'\u2014')+'</td><td>'+(meas?f1(t.real/t.km*100,2):'\u2014')+'</td><td>'+(meas?(diff>0?'+':'')+f1(diff)+'%':'')+'</td><td>'+(Math.abs(t.f1-t.f0)<0.005?f1(t.f1,2):f1(t.f0,2)+' \u2192 '+f1(t.f1,2))+'</td></tr>';
+  for(const e of [...t.ev].reverse())r+='<tr class="ev"><td>'+tg[e.y]+' '+dt(e.t,1)+'</td><td></td><td class="muted">'+Math.round(e.o)+' km</td><td>'+f1(e.l)+' L</td><td></td><td></td><td></td><td></td></tr>';}
+ $('rtb').innerHTML=r;chart(d.tanks.filter(t=>t.real>0&&t.km>0.2).reverse());
+}catch(e){}}
+function chart(ts){const svg=$('rc'),NS='http://www.w3.org/2000/svg';svg.innerHTML='';$('rcEmpty').textContent=ts.length?'':'Wykres pojawi sie po pierwszym tankowaniu do pelna z podaniem litrow.';
+ if(!ts.length)return;const W=700,H=262,L=44,R=10,T=26,B=40,vals=ts.flatMap(t=>[t.est/t.km*100,t.real/t.km*100]),max=Math.max(4,Math.ceil(Math.max(...vals)+0.5));
+ const y=v=>T+(H-T-B)*(1-v/max),step=(W-L-R)/ts.length,bw=Math.min(26,step/2-4),gap=2,tip=$('tip');
+ const el=(n,a,x)=>{const e=document.createElementNS(NS,n);for(const k in a)e.setAttribute(k,a[k]);if(x!=null)e.textContent=x;svg.appendChild(e);return e};
+ for(let v=0;v<=max;v++){el('line',{x1:L,x2:W-R,y1:y(v),y2:y(v),stroke:v?'#2c2c2a':'#383835'});el('text',{x:L-8,y:y(v)+4,'text-anchor':'end','font-size':11,fill:'#8c99a6'},v)}
+ el('text',{x:4,y:12,'font-size':11,fill:'#8c99a6'},'L/100 km');
+ const bar=(x,v,c,op)=>{const tp=y(v),bt=y(0),r=4;el('path',{d:`M${x},${bt} V${tp+r} Q${x},${tp} ${x+r},${tp} H${x+bw-r} Q${x+bw},${tp} ${x+bw},${tp+r} V${bt} Z`,fill:c,opacity:op})};
+ ts.forEach((t,i)=>{const cx=L+step*i+step/2,op=t.s==1?0.35:1,e=t.est/t.km*100,re=t.real/t.km*100,df=(t.real/t.est-1)*100;
+  bar(cx-bw-gap/2,e,'#3987e5',op);bar(cx+gap/2,re,'#d95926',op);
+  el('text',{x:cx,y:H-B+18,'text-anchor':'middle','font-size':12,fill:'#c3c2b7'},'Bak '+t.n);
+  el('text',{x:cx,y:H-B+33,'text-anchor':'middle','font-size':11,fill:'#8c99a6'},t.s==1?'pominiety':(df>0?'+':'')+f1(df)+'%');
+  const h=el('rect',{x:cx-step/2+2,y:T,width:step-4,height:H-T-B,fill:'transparent'});
+  const show=ev=>{tip.style.display='block';tip.style.left=(ev.clientX+12)+'px';tip.style.top=(ev.clientY+12)+'px';tip.innerHTML='<b>Bak '+t.n+'</b> ('+Math.round(t.km)+' km)<br>Szacunek: '+f1(e,2)+' L/100<br>Przeliczenie: '+f1(re,2)+' L/100'};
+  h.addEventListener('mousemove',show);h.addEventListener('touchstart',ev=>show(ev.touches[0]),{passive:true});h.addEventListener('mouseleave',()=>tip.style.display='none')})}
+fetch('/api/time',{method:'POST',body:new URLSearchParams({t:Math.floor(Date.now()/1000)})}).catch(()=>{});
 status();setInterval(status,2000);
 </script></body></html>)HTML";
 
@@ -90,10 +157,13 @@ status();setInterval(status,2000);
 // Start / stop
 // ---------------------------------------------------------------------------
 
-void WifiPortal::init(MotoState* statePtr, SettingsScreen* settingsPtr, TripsScreen* tripsPtr) {
+void WifiPortal::init(MotoState* statePtr, SettingsScreen* settingsPtr, TripsScreen* tripsPtr,
+                      RefuelLog* refuelPtr, FuelCalculator* fuelPtr) {
     state    = statePtr;
     settings = settingsPtr;
     trips    = tripsPtr;
+    refuels  = refuelPtr;
+    fuel     = fuelPtr;
 
     // Trasy rejestrujemy raz - serwer startuje dopiero po włączeniu hotspotu
     server.on("/",             HTTP_GET,  [this]() { handleRoot(); });
@@ -101,6 +171,9 @@ void WifiPortal::init(MotoState* statePtr, SettingsScreen* settingsPtr, TripsScr
     server.on("/api/trips",    HTTP_GET,  [this]() { handleTrips(); });
     server.on("/trasy.csv",    HTTP_GET,  [this]() { handleCsv(); });
     server.on("/api/settings", HTTP_POST, [this]() { handleSaveSettings(); });
+    server.on("/api/refuels",  HTTP_GET,  [this]() { handleRefuels(); });
+    server.on("/tankowania.csv", HTTP_GET, [this]() { handleRefuelsCsv(); });
+    server.on("/api/time",     HTTP_POST, [this]() { handleSetTime(); });
     server.onNotFound(                    [this]() { handleNotFound(); });
 
     WiFi.mode(WIFI_OFF); // Radio wyłączone, dopóki użytkownik nie włączy hotspotu
@@ -240,4 +313,78 @@ void WifiPortal::handleSaveSettings() {
 void WifiPortal::handleNotFound() {
     server.sendHeader("Location", address() + "/", true);
     server.send(302, "text/plain", "");
+}
+
+// ---------------------------------------------------------------------------
+// Historia tankowań
+// ---------------------------------------------------------------------------
+
+static void appendTankJson(String& j, const TankRecord& t) {
+    j += "{\"n\":" + String(t.n) + ",\"st\":" + String(t.startTime) + ",\"et\":" + String(t.endTime) +
+         ",\"so\":" + String(t.startOdo, 1) + ",\"eo\":" + String(t.endOdo, 1) + ",\"km\":" + String(t.km, 2) +
+         ",\"est\":" + String(t.estL, 3) + ",\"real\":" + String(t.realL, 2) +
+         ",\"f0\":" + String(t.factorBefore, 3) + ",\"f1\":" + String(t.factorAfter, 3) +
+         ",\"s\":" + String(t.status) + ",\"tn\":" + String(t.topN) + ",\"tl\":" + String(t.topL, 1) + ",\"ev\":[";
+    for (uint8_t i = 0; i < t.nEv; i++) {
+        const RefuelEvent& e = t.ev[i];
+        if (i) j += ",";
+        j += "{\"t\":" + String(e.time) + ",\"o\":" + String(e.odoKm, 1) + ",\"l\":" + String(e.liters, 1) +
+             ",\"y\":" + String(e.type) + "}";
+    }
+    j += "]}";
+}
+
+void WifiPortal::handleRefuels() {
+    if (!refuels) { server.send(503, "application/json", "{}"); return; }
+    // Bieżący okres uzupełniamy o km i szacunek na żywo z FuelCalculator
+    TankRecord open = refuels->openPeriod();
+    if (fuel) { open.km = fuel->tankDistanceKm(); open.estL = fuel->tankBurnedFuelL(); }
+
+    String j;
+    j.reserve(4096);
+    j += "{\"factor\":" + String(state->fuelCalFactor, 3) + ",\"open\":";
+    appendTankJson(j, open);
+    j += ",\"tanks\":[";
+    for (uint8_t i = 0; i < refuels->tankCount(); i++) {
+        if (i) j += ",";
+        appendTankJson(j, refuels->tankAt(i));
+    }
+    j += "]}";
+    server.send(200, "application/json", j);
+}
+
+// Pełna historia z karty SD; bez karty - ostatnie baki z pamięci
+void WifiPortal::handleRefuelsCsv() {
+    server.sendHeader("Content-Disposition", "attachment; filename=tankowania.csv");
+    if (refuels && refuels->hasSd() && SD_MMC.exists("/tankowania.csv")) {
+        fs::File f = SD_MMC.open("/tankowania.csv", FILE_READ);
+        if (f) { server.streamFile(f, "text/csv"); f.close(); return; }
+    }
+    String csv = "Bak;Km;Litry_razem;Dolewki_szt;Dolewki_L;Szacunek_L100;Przeliczenie_L100;Roznica_proc;Mnoznik_przed;Mnoznik_po;Status\n";
+    if (refuels) {
+        for (int i = refuels->tankCount() - 1; i >= 0; i--) { // Od najstarszego
+            const TankRecord& t = refuels->tankAt(i);
+            float est100  = t.km > 0.1f ? t.estL / t.km * 100.0f : 0;
+            float real100 = (t.km > 0.1f && t.realL > 0) ? t.realL / t.km * 100.0f : 0;
+            float diff    = (t.realL > 0 && t.estL > 0) ? (t.realL / t.estL - 1.0f) * 100.0f : 0;
+            const char* st = t.status == TANK_OK ? "OK" : t.status == TANK_SKIPPED ? "pominiety" : "bez_pomiaru";
+            csv += String(t.n) + ";" + String(t.km, 1) + ";" + String(t.realL, 2) + ";" + String(t.topN) + ";" +
+                   String(t.topL, 1) + ";" + String(est100, 2) + ";" + String(real100, 2) + ";" + String(diff, 1) + ";" +
+                   String(t.factorBefore, 3) + ";" + String(t.factorAfter, 3) + ";" + st + "\n";
+        }
+    }
+    server.send(200, "text/csv", csv);
+}
+
+// Telefon przy otwarciu strony ustawia zegar MotoDash (do dat tankowań, dopóki nie ma GPS)
+void WifiPortal::handleSetTime() {
+    if (server.hasArg("t")) {
+        long t = server.arg("t").toInt();
+        if (t > 1700000000L && RefuelLog::now() == 0) { // Ustawiamy tylko, gdy zegar nie był jeszcze ustawiony
+            struct timeval tv = { (time_t)t, 0 };
+            settimeofday(&tv, nullptr);
+            Serial.println("[WifiPortal] Ustawiono zegar z telefonu");
+        }
+    }
+    server.send(200, "application/json", "{\"ok\":true}");
 }

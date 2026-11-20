@@ -97,6 +97,7 @@ void RefuelScreen::activate(MotoState& state, uint8_t item) {
         case ITEM_PLUS:   changeAmount(state, +1); break;
         case ITEM_FULL:   startFullRefuel(state);  break;
         case ITEM_ADD:
+            if (refuelLog && fuelCalculator) refuelLog->addTopUp(amountL, fuelCalculator->odometerKm());
             if (fuelCalculator) fuelCalculator->addFuel(state, amountL);
             close(state);
             break;
@@ -124,20 +125,31 @@ void RefuelScreen::startFullRefuel(MotoState& state) {
         switchView(state, VIEW_CALIB, ITEM_PLUS);
         Serial.println("[Refuel] Kalibracja: podaj litry z dystrybutora");
     } else {
-        fuelCalculator->resetRefuel(state);
+        closeTank(state, 0.0f, false); // Za mało danych do pomiaru - zapis w historii i pełny bak
         close(state);
     }
 }
 
-void RefuelScreen::finishCalibration(MotoState& state, bool save) {
-    calApplied = false;
-    calOldF = calNewF = state.fuelCalFactor;
-    if (fuelCalculator) {
-        // Kalibracja MUSI być przed resetRefuel() - korzysta z licznika spalonego paliwa
-        if (save) calApplied = fuelCalculator->calibrateWithPump(state, pumpedL, calOldF, calNewF);
-        fuelCalculator->resetRefuel(state);
+// Zamyka okres w historii tankowań (przed zerowaniem liczników baku!) i ustawia pełny bak
+void RefuelScreen::closeTank(MotoState& state, float pumpedL, bool measurable) {
+    if (!fuelCalculator) return;
+    if (refuelLog) {
+        lastResult = refuelLog->closeFullTank(state, pumpedL, fuelCalculator->tankDistanceKm(),
+                                              fuelCalculator->tankBurnedFuelL(), fuelCalculator->odometerKm(),
+                                              measurable);
     }
-    if (save) switchView(state, VIEW_RESULT, 0); // Pokaż wynik kalibracji
+    fuelCalculator->resetRefuel(state);
+}
+
+void RefuelScreen::fullWithoutPump(MotoState& state) {
+    closeTank(state, 0.0f, false);
+    state.forceRedraw = true;
+}
+
+void RefuelScreen::finishCalibration(MotoState& state, bool save) {
+    // ZAPISZ = pomiar z litrów z dystrybutora; POMIN = pełny bak bez pomiaru
+    closeTank(state, save ? pumpedL : 0.0f, save);
+    if (save) switchView(state, VIEW_RESULT, 0); // Krótka informacja o mnożniku
     else      close(state);
 }
 
@@ -222,7 +234,7 @@ void RefuelScreen::update(TFT_eSPI& tft, const MotoState& state) {
         if (view == VIEW_CALIB) {
             // Użytkownik wybrał już "DO PELNA" - tankujemy do pełna, tylko bez kalibracji
             Serial.println("[Refuel] Brak reakcji w kalibracji - do pelna bez kalibracji");
-            if (fuelCalculator) fuelCalculator->resetRefuel(*statePtr);
+            closeTank(*statePtr, 0.0f, false);
         } else {
             Serial.println("[Refuel] Brak reakcji - powrot do ekranu jazdy");
         }
@@ -385,24 +397,26 @@ void RefuelScreen::drawCalibControls(TFT_eSPI& tft, const MotoState& state) {
 }
 
 void RefuelScreen::drawResult(TFT_eSPI& tft, const MotoState& state) {
+    const RefuelResult& r = lastResult;
+    bool changed = r.status == TANK_OK && fabsf(r.newF - r.oldF) >= 0.005f;
     tft.fillRoundRect(8, 40, 304, 150, 7, CARD_COLOR);
-    tft.drawRoundRect(8, 40, 304, 150, 7, calApplied ? ACCENT_GREEN : ACCENT_YELLOW);
+    tft.drawRoundRect(8, 40, 304, 150, 7, r.status == TANK_SKIPPED ? ACCENT_YELLOW : ACCENT_GREEN);
 
     tft.setTextColor(ACCENT_GREEN, CARD_COLOR);
     tft.drawCentreString("ZATANKOWANO DO PELNA", 160, 52, 2);
 
-    if (calApplied) {
+    if (r.status == TANK_OK) {
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString("Mnoznik spalania", 160, 84, 2);
+        tft.drawCentreString(changed ? "Mnoznik spalania" : "Mnoznik spalania bez zmian", 160, 84, 2);
         tft.setTextColor(TFT_WHITE, CARD_COLOR);
-        tft.drawCentreString(String(calOldF, 2) + "  ->  " + String(calNewF, 2), 160, 108, 4);
+        tft.drawCentreString(changed ? String(r.oldF, 2) + "  ->  " + String(r.newF, 2) : String(r.newF, 2), 160, 108, 4);
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString("Zapisano w ustawieniach", 160, 150, 2);
+        tft.drawCentreString("Szczegoly: strona Wi-Fi, Tankowania", 160, 150, 2);
     } else {
         tft.setTextColor(ACCENT_YELLOW, CARD_COLOR);
-        tft.drawCentreString("Mnoznika NIE zmieniono", 160, 90, 2);
+        tft.drawCentreString("Bak pominiety w kalibracji", 160, 90, 2);
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString("Roznica wieksza niz 30%.", 160, 118, 2);
+        tft.drawCentreString("Roznica " + String(r.diffPct, 0) + "% - wiecej niz 30%.", 160, 118, 2);
         tft.drawCentreString("Sprawdz litry lub czy bak byl pelny.", 160, 140, 2);
     }
 

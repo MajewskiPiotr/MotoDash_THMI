@@ -19,6 +19,7 @@ void FuelCalculator::init(MotoState& state) {
         if (tankBurnedL < 0.0f) tankBurnedL = tankFuelUsedL;        // Pierwsze uruchomienie po aktualizacji
         tankAddedL              = prefs.getFloat("tankAdded", 0.0f); // Suma dolewek od tankowania do pełna [L]
         tankFromFull            = prefs.getBool("tankFull", false);  // Liczniki od prawdziwego "do pełna"?
+        odoKm                   = prefs.getFloat("odoKm", 0.0f);     // Całkowity przebieg zliczony przez MotoDash [km]
 
         // 2. Licznik bieżącej wycieczki (Ekran 3)
         state.tripKm            = prefs.getFloat("tripKm", 0.0f);   // Dystans bieżącej wycieczki [km]
@@ -76,6 +77,7 @@ void FuelCalculator::update(MotoState& state) {
 
     // Dodajemy ten sam przyrost jednocześnie do licznika baku oraz do licznika bieżącej wycieczki
     tankKm        += distStep;
+    odoKm         += distStep;
     tankFuelUsedL += fuelStep;
     tankBurnedL   += fuelStep;
 
@@ -143,37 +145,6 @@ bool FuelCalculator::canCalibrate() const {
     return tankFromFull && tankBurnedL >= Config::CAL_MIN_BURNED_L;
 }
 
-// Kalibracja przy tankowaniu do pełna:
-//   faktycznie spalone = litry z dystrybutora + dolewki od poprzedniego "do pełna"
-//   nowy mnożnik       = stary mnożnik * (faktycznie spalone / spalone wg komputera)
-bool FuelCalculator::calibrateWithPump(MotoState& state, float pumpedL, float& oldF, float& newF) {
-    oldF = newF = state.fuelCalFactor;
-    if (!canCalibrate() || pumpedL <= 0.0f) return false;
-
-    float realBurnedL = pumpedL + tankAddedL;
-    float ratio       = realBurnedL / tankBurnedL;
-    Serial.println("[FuelCalculator] Kalibracja: dystrybutor+dolewki=" + String(realBurnedL, 1) +
-                   " L, komputer=" + String(tankBurnedL, 1) + " L, stosunek=" + String(ratio, 3));
-
-    // Zbyt duża różnica oznacza najpewniej pomyłkę (np. bak nie był pełny) - nie zmieniamy mnożnika
-    if (ratio > Config::CAL_MAX_RATIO || ratio < 1.0f / Config::CAL_MAX_RATIO) {
-        Serial.println("[FuelCalculator] Kalibracja odrzucona - roznica zbyt duza");
-        return false;
-    }
-
-    newF = constrain(oldF * ratio, Config::CAL_FACTOR_MIN, Config::CAL_FACTOR_MAX);
-    state.fuelCalFactor      = newF;
-    state.tankAvgFuel100 *= newF / oldF; // Średnia od razu w nowej skali (zasięg po tankowaniu będzie trafniejszy)
-
-    Preferences prefs;
-    if (prefs.begin("motodash", false)) {
-        prefs.putFloat("fuelCal", newF); // Ten sam klucz co w Ustawieniach (Kalibracja spalania)
-        prefs.end();
-    }
-    Serial.println("[FuelCalculator] Nowy mnoznik kalibracji: " + String(oldF, 3) + " -> " + String(newF, 3));
-    return true;
-}
-
 // Wspólne przeliczenie ilości paliwa w baku i zasięgu (używane po każdej zmianie licznika baku)
 void FuelCalculator::updateTankState(MotoState& state) {
     state.fuelInTankL = max(0.0f, state.tankCapacityL - tankFuelUsedL);
@@ -201,6 +172,7 @@ void FuelCalculator::saveToNvs(const MotoState& state) {
         prefs.putFloat("tankBurn", tankBurnedL);
         prefs.putFloat("tankAdded", tankAddedL);
         prefs.putBool("tankFull", tankFromFull);
+        prefs.putFloat("odoKm", odoKm);
         prefs.putFloat("tankAvg", state.tankAvgFuel100);
 
         prefs.putFloat("tripKm", state.tripKm);

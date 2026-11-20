@@ -2,6 +2,7 @@
 #include "Screen.h"
 #include "FuelCalculator.h"
 #include "ScreenManager.h"
+#include "RefuelLog.h"
 
 // Ekran-nakładka "TANKOWANIE" (otwierany podwójnym kliknięciem ACTION na ekranie jazdy
 // lub automatycznie po starcie przy prawie pustym baku).
@@ -15,12 +16,15 @@
 //            MODE 2s = anuluj / wstecz, ACTION 2s = do pełna (w kalibracji: zapisz).
 class RefuelScreen : public Screen {
 public:
-    RefuelScreen(FuelCalculator* fuelCalc, ScreenManager* mgr)
-        : fuelCalculator(fuelCalc), screenManager(mgr) {}
+    RefuelScreen(FuelCalculator* fuelCalc, ScreenManager* mgr, RefuelLog* log)
+        : fuelCalculator(fuelCalc), screenManager(mgr), refuelLog(log) {}
 
     // Przygotowuje domyślną ilość i wyświetla ekran jako nakładkę.
     // autoOpened = true: otwarty automatycznie po starcie przy prawie pustym baku (zaznacza DO PELNA).
     void open(MotoState& state, bool autoOpened = false);
+
+    // Szybkie "do pełna" bez ekranu (przytrzymanie ACTION na ekranie jazdy) - zapis w historii bez pomiaru
+    void fullWithoutPump(MotoState& state);
 
     void onEnter(TFT_eSPI& tft, const MotoState& state) override;
     void update(TFT_eSPI& tft, const MotoState& state) override;
@@ -41,6 +45,7 @@ private:
 
     FuelCalculator* fuelCalculator;
     ScreenManager*  screenManager;
+    RefuelLog*      refuelLog;
 
     View    view          = VIEW_MAIN;
     float   amountL       = 5.0f;           // Wybrana ilość do dolania [L]
@@ -53,10 +58,8 @@ private:
     unsigned long lastActivityMs = 0;       // Czas ostatniego naciśnięcia przycisku na tym ekranie
     int           lastShownSec   = -1;      // Ostatnio narysowana liczba sekund do automatycznego powrotu
 
-    // Wynik kalibracji (do widoku wyniku)
-    bool  calApplied = false;
-    float calOldF    = 1.0f;
-    float calNewF    = 1.0f;
+    // Wynik zamknięcia baku (do widoku wyniku)
+    RefuelResult lastResult;
 
     float freeSpaceL(const MotoState& state) const; // Ile litrów zmieści się jeszcze w baku
     float maxAmountL(const MotoState& state) const; // Maksymalna ilość do wyboru (wolne miejsce w baku)
@@ -68,6 +71,7 @@ private:
     void  activateCalib(MotoState& state, uint8_t item); // Akcje widoku kalibracji
     void  startFullRefuel(MotoState& state);             // DO PELNA: kalibracja (jeśli możliwa) lub od razu pełny bak
     void  finishCalibration(MotoState& state, bool save);
+    void  closeTank(MotoState& state, float pumpedL, bool measurable); // Historia + zerowanie licznika baku
     void  switchView(MotoState& state, View v, uint8_t sel);
     void  close(MotoState& state);
     void  touchActivity() { lastActivityMs = millis(); } // Resetuje licznik bezczynności

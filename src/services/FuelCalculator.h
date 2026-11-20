@@ -11,12 +11,12 @@ public:
     void addFuel(MotoState& state, float liters); // Dolewa konkretną ilość paliwa [L] (tankowanie częściowe)
     void resetCurrentTrip(MotoState& state);// Zeruje licznik bieżącej wycieczki (po zapisaniu jej do historii)
 
-    // --- AUTOMATYCZNA KALIBRACJA (tankowanie do pełna z podaniem litrów z dystrybutora) ---
-    bool  canCalibrate() const;                // Czy od poprzedniego "do pełna" spalono dość paliwa do kalibracji
+    // --- DANE DLA HISTORII TANKOWAŃ I KALIBRACJI (RefuelLog) ---
+    bool  canCalibrate() const;                // Czy od poprzedniego "do pełna" spalono dość paliwa do pomiaru
     float expectedRefillL() const { return tankFuelUsedL; } // Ile litrów wg komputera powinno wejść do pełna
-    // Porównuje litry z dystrybutora ze spalonym paliwem wg komputera i koryguje mnożnik kalibracji.
-    // Zwraca true, jeśli mnożnik zmieniono (oldF/newF = wartość przed i po). Nie zeruje baku - po niej wywołaj resetRefuel().
-    bool  calibrateWithPump(MotoState& state, float pumpedL, float& oldF, float& newF);
+    float tankDistanceKm() const  { return tankKm; }        // Km od ostatniego tankowania do pełna
+    float tankBurnedFuelL() const { return tankBurnedL; }   // Paliwo spalone wg komputera od tankowania do pełna [L]
+    float odometerKm() const      { return odoKm; }         // Całkowity przebieg zliczony przez MotoDash [km]
 
 private:
     unsigned long lastCalcMs     = 0;     // Znacznik czasu ostatniego obliczenia [ms]
@@ -29,6 +29,9 @@ private:
     float tankBurnedL            = 0.0f;  // Paliwo faktycznie spalone od tankowania do pełna [L] (do średniej spalania)
     float tankAddedL             = 0.0f;  // Suma dolewek ("DOLEJ") od ostatniego tankowania do pełna [L]
     bool  tankFromFull           = false; // Czy liczniki baku liczą się od prawdziwego tankowania do pełna (warunek kalibracji)
+
+    // Całkowity przebieg zliczony przez komputer (do historii tankowań)
+    float odoKm                  = 0.0f;
 
     // 2. Licznik bieżącej wycieczki (przetrwa postoje na kawę -> Ekran 3)
     float tripFuelUsedL          = 0.0f;  // Paliwo zużyte podczas bieżącej wycieczki [L]

@@ -14,6 +14,7 @@
 #include "TouchHandler.h"
 #include "RefuelScreen.h"
 #include "WifiPortal.h"
+#include "RefuelLog.h"
 #include "WifiScreen.h"
 
 // --- INSTANCJE GLOBALNE SERWISÓW I MODELU STANU ---
@@ -27,7 +28,8 @@ ScreenManager   screenManager;
 TouchHandler    touchHandler;
 
 // --- INSTANCJE POSZCZEGÓLNYCH EKRANÓW ---
-RefuelScreen    refuelScreen(&fuelCalculator, &screenManager); // Nakładka (poza karuzelą)
+RefuelLog       refuelLog;     // Historia tankowań i samoczynna kalibracja
+RefuelScreen    refuelScreen(&fuelCalculator, &screenManager, &refuelLog); // Nakładka (poza karuzelą)
 RidingScreen    ridingScreen(&fuelCalculator, &refuelScreen);
 MotoStatsScreen motoStatsScreen(&canReader);
 SettingsScreen  settingsScreen(&screenManager);
@@ -53,8 +55,8 @@ void setup() {
     screenManager.registerScreen(&ridingScreen);
     screenManager.registerScreen(&motoStatsScreen);
     screenManager.registerScreen(&tripsScreen);
-    screenManager.registerScreen(&settingsScreen);
     screenManager.registerScreen(&wifiScreen);
+    screenManager.registerScreen(&settingsScreen);
 
     // 4. Uruchomienie poszczególnych modułów sprzętowych i logiki
     canReader.init();
@@ -63,7 +65,9 @@ void setup() {
     fuelCalculator.init(motoState);
     buttonHandler.init(&motoState, &screenManager);
     tripsScreen.initSdAndLoad(motoState);
-    wifiPortal.init(&motoState, &settingsScreen, &tripsScreen); // Hotspot startuje dopiero z ekranu Wi-Fi
+    refuelLog.init(fuelCalculator.odometerKm());
+    refuelLog.setSdAvailable(tripsScreen.hasSd());
+    wifiPortal.init(&motoState, &settingsScreen, &tripsScreen, &refuelLog, &fuelCalculator); // Hotspot startuje dopiero z ekranu Wi-Fi
 
     // 5. Prawie pusty bak po uruchomieniu = prawdopodobnie jesteśmy na stacji -> pokaż ekran Tankowania
     if (motoState.fuelInTankL < Config::REFUEL_PROMPT_L) {

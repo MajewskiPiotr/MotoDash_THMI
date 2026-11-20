@@ -103,10 +103,8 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
 
 // Długie przytrzymanie przycisku ACTION na ekranie jazdy resetuje paliwo po tankowaniu
 bool RidingScreen::onActionLongPress(MotoState& state) {
-    if (fuelCalculator) {
-        fuelCalculator->resetRefuel(state);
-        state.forceRedraw = true;
-    }
+    // Szybkie "do pełna" bez pytania o litry - trafia do historii tankowań jako bak bez pomiaru
+    if (refuelScreen) refuelScreen->fullWithoutPump(state);
     return true;
 }
 
