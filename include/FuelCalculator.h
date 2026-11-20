@@ -16,11 +16,13 @@ private:
     unsigned long lastSaveMs     = 0;     // Znacznik czasu ostatniego zapisu do Flash [ms]
     bool          wasMoving      = false; // Flaga wykrywająca moment zatrzymania motocykla
 
-    // 1. Licznik bieżącego baku (do wyliczania zasięgu)
+    // 1. Licznik bieżącego baku (zerowany przy tankowaniu do pełna -> Ekran 1)
+    float tankKm                 = 0.0f;  // Dystans przejechany od ostatniego tankowania [km]
     float tankFuelUsedL          = 0.0f;  // Paliwo zużyte od ostatniego tankowania [L]
 
-    // 2. Licznik bieżącej wycieczki (przetrwa postoje na kawę i tankowanie)
+    // 2. Licznik bieżącej wycieczki (przetrwa postoje na kawę -> Ekran 3)
     float tripFuelUsedL          = 0.0f;  // Paliwo zużyte podczas bieżącej wycieczki [L]
+
 
     // 3. Licznik ogólny (długoterminowy)
     float overallKm              = 0.0f;  // Całkowity dystans zliczony przez komputer [km]
