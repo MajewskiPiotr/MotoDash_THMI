@@ -24,11 +24,8 @@ void FuelCalculator::init(MotoState& state) {
         prefs.end(); // Zamyka dostęp do pamięci Flash
     }
 
-    // Wylicza początkowy pozostały zasięg na podstawie stanu baku i średniego spalania z obecnego baku
-    float remainingL = max(0.0f, state.tankCapacityL - tankFuelUsedL);
-    state.rangeKm = (state.overallAvgFuel100 > 0.5f)
-                    ? (int)((remainingL / state.overallAvgFuel100) * 100.0f)
-                    : 0;
+    // Wylicza paliwo w baku i pozostały zasięg na podstawie średniego spalania ogólnego
+    updateTankState(state);
 
     Serial.println("[FuelCalculator] Wczytano: Bak=" + String(tankKm, 1) + "km (" +
                    String(state.overallAvgFuel100, 1) + "L), Wycieczka=" +
@@ -81,11 +78,8 @@ void FuelCalculator::update(MotoState& state) {
         state.tripAvgFuel100 = (tripFuelUsedL / state.tripKm) * 100.0f;
     }
 
-    // 6. Wyliczenie szacowanego zasięgu na pozostałym paliwie w baku
-    float remainingL = max(0.0f, state.tankCapacityL - tankFuelUsedL);
-    state.rangeKm = (state.overallAvgFuel100 > 0.5f)
-                    ? (int)((remainingL / state.overallAvgFuel100) * 100.0f)
-                    : 0;
+    // 6. Obliczenie paliwa w baku i pozostałego zasięgu
+    updateTankState(state);
 
     // 7. Inteligentny zapis do nieulotnej pamięci Flash (chroni komórki pamięci przed zużyciem)
     bool isMoving = (state.speedKmh > 3);
@@ -104,14 +98,30 @@ void FuelCalculator::update(MotoState& state) {
 void FuelCalculator::resetRefuel(MotoState& state) {
     tankFuelUsedL = 0.0f; // Zeruje zużyte litry z baku
     tankKm        = 0.0f; // Zeruje kilometry od tankowania (nowe średnie spalanie zacznie liczyć się od zera)
-
-    // Zasięg przelicza się na pełny bak na podstawie dotychczasowej średniej
-    state.rangeKm = (state.overallAvgFuel100 > 0.5f)
-                    ? (int)((state.tankCapacityL / state.overallAvgFuel100) * 100.0f)
-                    : 0;
+    updateTankState(state); // Pełny bak -> przelicza paliwo w baku i zasięg
 
     saveToNvs(state);
     Serial.println("[FuelCalculator] Tankowanie: zresetowano zasieg i srednie spalanie z baku!");
+}
+
+// Dolewa konkretną ilość paliwa (tankowanie częściowe). Nadmiar ponad pojemność baku jest ignorowany.
+void FuelCalculator::addFuel(MotoState& state, float liters) {
+    if (liters <= 0.0f) return;
+    // Jeśli bak był "przepełniony" w obliczeniach (zużyto więcej niż pojemność), startujemy od pustego
+    tankFuelUsedL = min(tankFuelUsedL, state.tankCapacityL);
+    tankFuelUsedL = max(0.0f, tankFuelUsedL - liters);
+    updateTankState(state);
+    saveToNvs(state);
+    Serial.println("[FuelCalculator] Dolano " + String(liters, 1) + " L -> w baku " +
+                   String(state.fuelInTankL, 1) + " L");
+}
+
+// Wspólne przeliczenie ilości paliwa w baku i zasięgu (używane po każdej zmianie licznika baku)
+void FuelCalculator::updateTankState(MotoState& state) {
+    state.fuelInTankL = max(0.0f, state.tankCapacityL - tankFuelUsedL);
+    state.rangeKm = (state.overallAvgFuel100 > 0.5f)
+                    ? (int)((state.fuelInTankL / state.overallAvgFuel100) * 100.0f)
+                    : 0;
 }
 
 // Zeruje licznik bieżącej wycieczki (wywoływane przy archiwizacji zakończonej wycieczki do historii CSV)

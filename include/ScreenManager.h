@@ -15,6 +15,11 @@ public:
     void prevScreen(MotoState& state); // Przełącza na poprzedni ekran w karuzeli (np. 2 -> 1 -> 0)
     Screen* getActiveScreen();             // Zwraca wskaźnik do aktualnie wyświetlanego ekranu
 
+    // Ekran-nakładka spoza karuzeli (np. Tankowanie). Zasłania aktywny ekran do czasu zamknięcia.
+    void showOverlay(Screen* overlay, MotoState& state);
+    void closeOverlay(MotoState& state);   // Zamyka nakładkę i wraca do ekranu, z którego ją otwarto
+    bool isOverlayActive() const { return overlayScreen != nullptr; }
+
 private:
     static constexpr uint8_t MAX_SCREENS = 6;                 // Maksymalna liczba ekranów w aplikacji
     static constexpr unsigned long REFRESH_INTERVAL_MS = 150; // Minimalny odstęp między odświeżeniami ekranu (~6.5 FPS)
@@ -25,6 +30,7 @@ private:
     uint8_t activeIndex = 0;                  // Indeks aktualnie wyświetlanego ekranu
     uint8_t lastRenderedIndex = 255;          // Zapamiętany poprzedni indeks (służy do wykrycia zmiany widoku)
     unsigned long lastRenderMs = 0;           // Znacznik czasu ostatniego odświeżenia ekranu [ms]
+    Screen* overlayScreen = nullptr;          // Aktualnie otwarta nakładka (nullptr = brak)
 
     void drawPageIndicator();                 // Rysuje kropki stron (np. ● ○ ○) w prawym górnym rogu
 };

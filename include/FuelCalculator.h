@@ -8,6 +8,7 @@ public:
     void init(MotoState& state);            // Wczytuje wszystkie liczniki z pamięci Flash przy starcie
     void update(MotoState& state);          // Przelicza spalanie i zapisuje stan na postojach / co 5 min
     void resetRefuel(MotoState& state);     // Zeruje paliwo w baku po tankowaniu (nie kasuje wycieczki!)
+    void addFuel(MotoState& state, float liters); // Dolewa konkretną ilość paliwa [L] (tankowanie częściowe)
     void resetCurrentTrip(MotoState& state);// Zeruje licznik bieżącej wycieczki (po zapisaniu jej do historii)
     void resetOverall(MotoState& state);    // Zeruje licznik ogólny (długoterminowy)
 
@@ -29,4 +30,5 @@ private:
     float overallFuelUsedL       = 0.0f;  // Całkowite zużyte paliwo [L]
 
     void saveToNvs(const MotoState& state); // Zapisuje komplet liczników do nieulotnej pamięci Flash
+    void updateTankState(MotoState& state); // Przelicza paliwo w baku i zasięg na podstawie tankFuelUsedL
 };

@@ -53,6 +53,7 @@ struct MotoState {
     float tripAvgFuel100    = 5.1f;  // Średnie spalanie z bieżącej wycieczki [L/100km]
     float tripKm            = 0.0f;  // Dystans bieżącej wycieczki [km]
     int   rangeKm           = 320;   // Szacowany zasięg na pozostałym paliwie w baku [km]
+    float fuelInTankL       = 20.0f; // Szacowana ilość paliwa w baku [L] (pojemność - zużyte od tankowania)
 
 
     // --- USTAWIENIA EDYTOWALNE W KONFIGURACJI (EKRAN 4 - ZAPISYWANE W FLASH) ---

@@ -30,6 +30,7 @@ void ButtonHandler::init(MotoState* statePtr, ScreenManager* screenMgrPtr) {
 
     // --- KRĂ“TKIE KLIKNIÄCIE PRZYCISKU ACTION ---
     btnAction.attachClick([]() {
+        Serial.println("[Btn] ACTION: klikniecie");
         if (!s_state || !s_screenMgr) return;
         Screen* active = s_screenMgr->getActiveScreen();
         // JeĹ›li aktywny ekran (np. SettingsScreen) obsĹ‚uĹĽy klikniÄ™cie (+), koĹ„czymy.
@@ -38,6 +39,26 @@ void ButtonHandler::init(MotoState* statePtr, ScreenManager* screenMgrPtr) {
 
         s_state->nightBrightness = !s_state->nightBrightness;
         analogWrite(Config::PIN_TFT_BL, s_state->nightBrightness ? 70 : 255);
+    });
+
+    // --- PODWÓJNE KLIKNIĘCIE PRZYCISKU ACTION ---
+    // Na ekranie jazdy otwiera ekran Tankowania. Na pozostałych ekranach działa jak dwa kliknięcia.
+    btnAction.setClickMs(500); // Okno na drugie kliknięcie liczone od puszczenia przycisku [ms]
+    btnAction.attachDoubleClick([]() {
+        Serial.println("[Btn] ACTION: podwojne klikniecie");
+        if (!s_state || !s_screenMgr) return;
+        Screen* active = s_screenMgr->getActiveScreen();
+        if (active && active->onActionDoubleClick(*s_state)) return;
+
+        // Ekran nie obsługuje podwójnego kliknięcia -> wykonaj dwa zwykłe kliknięcia ACTION
+        Screen* first = active;
+        for (int i = 0; i < 2; i++) {
+            active = s_screenMgr->getActiveScreen();
+            if (i == 1 && active != first) break; // Pierwsze kliknięcie zmieniło ekran - drugie pomijamy
+            if (active && active->onActionClick(*s_state)) continue;
+            s_state->nightBrightness = !s_state->nightBrightness;
+            analogWrite(Config::PIN_TFT_BL, s_state->nightBrightness ? 70 : 255);
+        }
     });
 
     // --- DĹUGIE PRZYTRZYMANIE PRZYCISKU ACTION ---

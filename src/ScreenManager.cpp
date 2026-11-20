@@ -30,6 +30,7 @@ void ScreenManager::init() {
 // Cofnięcie do poprzedniego ekranu (wywoływane przy przesunięciu palcem w prawo)
 void ScreenManager::prevScreen(MotoState& state) {
     if (screenCount == 0) return;
+    if (overlayScreen) { closeOverlay(state); return; } // Gest na nakładce tylko ją zamyka
     // Dodajemy screenCount przed modulo, aby uniknąć ujemnych indeksów w C++
     activeIndex = (activeIndex + screenCount - 1) % screenCount;
     state.forceRedraw = true;
@@ -133,18 +134,33 @@ void ScreenManager::registerScreen(Screen* screen) {
 
 void ScreenManager::nextScreen(MotoState& state) {
     if (screenCount == 0) return;
+    if (overlayScreen) { closeOverlay(state); return; } // Gest/przycisk na nakładce tylko ją zamyka
     activeIndex = (activeIndex + 1) % screenCount; // Przechodzi cyklicznie do następnego ekranu
     state.forceRedraw = true;                      // Wymusza natychmiastowe narysowanie tła nowego ekranu
 }
 
 void ScreenManager::goToFirstScreen(MotoState& state) {
+    overlayScreen = nullptr;  // Zamyka ewentualną nakładkę
     activeIndex = 0;          // Ustawia indeks pierwszego ekranu (Tryb Jazdy)
     state.forceRedraw = true; // Wymusza natychmiastowe przerysowanie
 }
 
 Screen* ScreenManager::getActiveScreen() {
+    if (overlayScreen) return overlayScreen; // Nakładka ma pierwszeństwo przed karuzelą
     if (screenCount == 0) return nullptr;
     return screens[activeIndex];
+}
+
+void ScreenManager::showOverlay(Screen* overlay, MotoState& state) {
+    if (!overlay) return;
+    overlayScreen = overlay;
+    state.forceRedraw = true; // Narysuje nakładkę od zera w najbliższym render()
+}
+
+void ScreenManager::closeOverlay(MotoState& state) {
+    if (!overlayScreen) return;
+    overlayScreen = nullptr;
+    state.forceRedraw = true; // Przerysowuje ekran, który był pod nakładką
 }
 
 void ScreenManager::render(MotoState& state) {
@@ -158,7 +174,7 @@ void ScreenManager::render(MotoState& state) {
         lastRenderMs = millis(); // Resetuje licznik czasu odświeżania
 
         current->onEnter(tft, state); // Rysuje statyczne tło, ramki i etykiety nowego ekranu
-        drawPageIndicator();          // Rysuje kropki stron w prawym górnym rogu
+        if (!overlayScreen) drawPageIndicator(); // Kropki stron tylko dla ekranów z karuzeli
         current->update(tft, state);  // Od razu wpisuje pierwsze wartości liczbowe
         return;
     }

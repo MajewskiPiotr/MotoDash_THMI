@@ -44,6 +44,7 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.fillRoundRect(164, 112, 148, 78, 7, CARD_COLOR);
     tft.drawRoundRect(164, 112, 148, 78, 7, BORDER_COLOR);
     tft.drawString("SREDNIE / ZASIEG", 172, 120, 1);
+    tft.drawString("2x ACTION: tankowanie", 172, 176, 1); // Podpowiedź otwarcia ekranu Tankowania
 
     // --- DOLNA BELKA (Y: 196..234) ---
     // CiĹ›nienie i temperatura opon (TPMS)
@@ -103,5 +104,12 @@ bool RidingScreen::onActionLongPress(MotoState& state) {
         fuelCalculator->resetRefuel(state);
         state.forceRedraw = true;
     }
+    return true;
+}
+
+// Podwójne kliknięcie ACTION na ekranie jazdy otwiera ekran Tankowania (stan baku, do pełna / dolej X litrów)
+bool RidingScreen::onActionDoubleClick(MotoState& state) {
+    if (!refuelScreen) return false;
+    refuelScreen->open(state);
     return true;
 }

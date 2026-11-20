@@ -12,6 +12,7 @@
 #include "SettingsScreen.h"
 #include "AnaliticScreen.h"
 #include "TouchHandler.h"
+#include "RefuelScreen.h"
 
 // --- INSTANCJE GLOBALNE SERWISÓW I MODELU STANU ---
 MotoState       motoState;
@@ -24,7 +25,8 @@ ScreenManager   screenManager;
 TouchHandler    touchHandler;
 
 // --- INSTANCJE POSZCZEGÓLNYCH EKRANÓW ---
-RidingScreen    ridingScreen(&fuelCalculator);
+RefuelScreen    refuelScreen(&fuelCalculator, &screenManager); // Nakładka (poza karuzelą)
+RidingScreen    ridingScreen(&fuelCalculator, &refuelScreen);
 MotoStatsScreen motoStatsScreen(&canReader);
 SettingsScreen  settingsScreen(&screenManager);
 AnaliticScreen  analiticScreen;

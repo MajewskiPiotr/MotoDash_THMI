@@ -19,4 +19,8 @@ public:
     virtual bool onModeLongPress(MotoState& state)   { return false; }
     virtual bool onActionClick(MotoState& state)     { return false; }
     virtual bool onActionLongPress(MotoState& state) { return false; }
+
+    // Podwójne kliknięcie ACTION. Jeśli ekran go nie obsłuży (false), ButtonHandler
+    // traktuje je jak dwa zwykłe kliknięcia ACTION (np. dwa razy "+" w menu).
+    virtual bool onActionDoubleClick(MotoState& state) { return false; }
 };
