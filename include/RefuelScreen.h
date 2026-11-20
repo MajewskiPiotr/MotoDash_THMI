@@ -14,7 +14,9 @@ public:
     RefuelScreen(FuelCalculator* fuelCalc, ScreenManager* mgr)
         : fuelCalculator(fuelCalc), screenManager(mgr) {}
 
-    void open(MotoState& state); // Przygotowuje domyślną ilość i wyświetla ekran jako nakładkę
+    // Przygotowuje domyślną ilość i wyświetla ekran jako nakładkę.
+    // autoOpened = true: otwarty automatycznie po starcie przy prawie pustym baku (zaznacza DO PELNA).
+    void open(MotoState& state, bool autoOpened = false);
 
     void onEnter(TFT_eSPI& tft, const MotoState& state) override;
     void update(TFT_eSPI& tft, const MotoState& state) override;
@@ -36,12 +38,18 @@ private:
     bool    controlsDirty = true;          // Przerysuj przyciski i wybraną ilość
     unsigned long lastFuelDrawMs = 0;      // Ostatnie odświeżenie karty stanu paliwa
     float   lastDrawnFuelL = -1.0f;        // Ostatnio narysowana ilość paliwa (odświeżamy tylko po zmianie)
+    MotoState*    statePtr       = nullptr; // Stan aplikacji (potrzebny do automatycznego zamknięcia w update())
+    unsigned long lastActivityMs = 0;       // Czas ostatniego naciśnięcia przycisku na tym ekranie
+    int           lastShownSec   = -1;      // Ostatnio narysowana liczba sekund do automatycznego powrotu
 
     float freeSpaceL(const MotoState& state) const; // Ile litrów zmieści się jeszcze w baku
-    float maxAmountL(const MotoState& state) const; // Maksymalna ilość do wyboru (wielokrotność kroku)
+    float maxAmountL(const MotoState& state) const; // Maksymalna ilość do wyboru (wolne miejsce w baku)
+    bool  isTankFull(const MotoState& state) const; // Bak pełny -> -, + i DOLEJ są nieaktywne
+    bool  isItemEnabled(const MotoState& state, uint8_t item) const;
     void  changeAmount(const MotoState& state, int steps);
     void  activate(MotoState& state, uint8_t item); // Wykonuje akcję wybranej opcji
     void  close(MotoState& state);
+    void  touchActivity() { lastActivityMs = millis(); } // Resetuje licznik bezczynności
 
     void drawFuelCard(TFT_eSPI& tft, const MotoState& state);
     void drawControls(TFT_eSPI& tft, const MotoState& state);

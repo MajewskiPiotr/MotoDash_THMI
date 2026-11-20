@@ -118,9 +118,9 @@ bool SettingsScreen::onModeLongPress(MotoState& state) {
 // Krótkie kliknięcie ACTION zwiększa wybraną wartość (+) lub zatwierdza wyjście
 bool SettingsScreen::onActionClick(MotoState& state) {
     switch (selectedRow) {
-        case 0: // Kalibracja spalania (krok co 0.02 w zakresie 0.80 .. 1.20)
+        case 0: // Kalibracja spalania (krok co 0.02 w zakresie 0.70 .. 1.30, jak przy automatycznej kalibracji)
             state.fuelCalFactor += 0.02f;
-            if (state.fuelCalFactor > 1.20f) state.fuelCalFactor = 0.80f;
+            if (state.fuelCalFactor > 1.30f) state.fuelCalFactor = 0.70f;
             break;
         case 1: // Pojemność baku (krok co 0.5 L w zakresie 10.0 .. 30.0 L)
             state.tankCapacityL += 0.5f;
@@ -152,7 +152,7 @@ bool SettingsScreen::onActionClick(MotoState& state) {
 bool SettingsScreen::onActionLongPress(MotoState& state) {
     switch (selectedRow) {
         case 0:
-            state.fuelCalFactor = max(0.80f, state.fuelCalFactor - 0.02f);
+            state.fuelCalFactor = max(0.70f, state.fuelCalFactor - 0.02f);
             break;
         case 1:
             state.tankCapacityL = max(10.0f, state.tankCapacityL - 0.5f);

@@ -58,6 +58,11 @@ void setup() {
     fuelCalculator.init(motoState);
     buttonHandler.init(&motoState, &screenManager);
     analiticScreen.initSdAndLoad(motoState);
+
+    // 5. Prawie pusty bak po uruchomieniu = prawdopodobnie jesteśmy na stacji -> pokaż ekran Tankowania
+    if (motoState.fuelInTankL < Config::REFUEL_PROMPT_L) {
+        refuelScreen.open(motoState, true);
+    }
 }
 
 void loop() {

@@ -25,10 +25,13 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
     tft.drawString("TEMP. SILNIKA", 16, 30, 1);
 
-    // Prawy gĂłrny: Spalanie chwilowe
+    // Prawy górny: Spalanie (chwilowe po lewej, średnie z baku po prawej)
     tft.fillRoundRect(164, 22, 148, 84, 7, CARD_COLOR);
     tft.drawRoundRect(164, 22, 148, 84, 7, BORDER_COLOR);
-    tft.drawString("SPALANIE CHWILOWE", 172, 30, 1);
+    tft.drawString("SPALANIE", 172, 30, 1);
+    tft.drawString("CHWILOWE", 172, 42, 1);
+    tft.drawRightString("SREDNIE", 304, 42, 1);
+    tft.drawRightString("L/100km", 304, 88, 1);
 
     // --- ĹšRODKOWY RZÄ„D ---
     // Lewy dolny (podzielony na 2 mniejsze kafelki po 71 px: Akumulator + Otoczenie)
@@ -40,11 +43,10 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.drawRoundRect(85, 112, 71, 78, 7, BORDER_COLOR);
     tft.drawCentreString("OTOCZ.", 120, 120, 1);
 
-    // Prawy dolny: Spalanie Ĺ›rednie i pozostaĹ‚y zasiÄ™g
+    // Prawy dolny: Paliwo w baku (po lewej) i zasięg (po prawej)
     tft.fillRoundRect(164, 112, 148, 78, 7, CARD_COLOR);
     tft.drawRoundRect(164, 112, 148, 78, 7, BORDER_COLOR);
-    tft.drawString("SREDNIE / ZASIEG", 172, 120, 1);
-    tft.drawString("2x ACTION: tankowanie", 172, 176, 1); // Podpowiedź otwarcia ekranu Tankowania
+    tft.drawString("PALIWO / ZASIEG", 172, 120, 1);
 
     // --- DOLNA BELKA (Y: 196..234) ---
     // CiĹ›nienie i temperatura opon (TPMS)
@@ -60,12 +62,16 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
     tft.setTextPadding(130);
     tft.drawString(String(state.engineTempC) + " C", 16, 56, 4);
 
-    // 2. Spalanie chwilowe (duĹĽa liczba + jednostka obok)
+    // 2. Spalanie: chwilowe (lewa kolumna) i średnie z baku (prawa kolumna)
     tft.setTextColor(TFT_WHITE, CARD_COLOR);
-    tft.setTextPadding(130);
-    tft.drawString(String(state.instFuel100, 1), 172, 52, 4);
+    tft.setTextPadding(66);
+    tft.drawString(String(state.instFuel100, 1), 172, 56, 4);
+    tft.setTextColor(ACCENT_GREEN, CARD_COLOR);
+    tft.drawRightString(String(state.overallAvgFuel100, 1), 304, 56, 4);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-    tft.drawString(state.speedKmh > 3 ? "L/100km" : "L/h", 172, 84, 1);
+    tft.setTextPadding(60);
+    tft.drawString(state.speedKmh > 3 ? "L/100km" : "L/h", 172, 88, 1); // Na postoju chwilowe w L/h
+    tft.setTextPadding(0);
 
     // 3. Akumulator (wyĹ›rodkowany w lewym kafelku)
     tft.setTextColor(ACCENT_GREEN, CARD_COLOR);
@@ -78,14 +84,18 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
     tft.setTextPadding(60);
     tft.drawCentreString(String(state.ambientTempC, 1) + "C", 120, 148, 2);
 
-    // 5. Spalanie Ĺ›rednie i pozostaĹ‚y zasiÄ™g obok siebie w prawym dolnym kafelku
-    tft.setTextColor(TFT_WHITE, CARD_COLOR);
-    tft.setTextPadding(65);
-    tft.drawString(String(state.overallAvgFuel100 , 1) + " L", 172, 148, 2);
+    // 5. Paliwo w baku (lewa kolumna) i szacowany zasięg (prawa kolumna)
+    float fuelRatio = (state.tankCapacityL > 0.0f) ? state.fuelInTankL / state.tankCapacityL : 0.0f;
+    uint16_t fuelCol = (fuelRatio < 0.10f) ? ACCENT_RED      // Rezerwa krytyczna
+                     : (fuelRatio < 0.25f) ? 0xFFE0          // Żółty - niski poziom
+                     : TFT_WHITE;
+    tft.setTextColor(fuelCol, CARD_COLOR);
+    tft.setTextPadding(66);
+    tft.drawString(String(state.fuelInTankL, 1), 172, 146, 4);   // Wyśrodkowane w pionie kafelka
 
     tft.setTextColor(ACCENT_BLUE, CARD_COLOR);
-    tft.setTextPadding(70);
-    tft.drawRightString("~" + String(state.rangeKm) + " km", 304, 148, 2);
+    tft.drawRightString(String(state.rangeKm), 304, 146, 4);
+    tft.setTextPadding(0);
 
     // 6. Dolny pasek TPMS
     bool alert = (state.frontBar < state.minFrontBar || state.rearBar < state.minRearBar);

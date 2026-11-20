@@ -1,4 +1,5 @@
 #include "RefuelScreen.h"
+#include "Config.h"
 
 // Paleta kolorów w formacie RGB565 (spójna z pozostałymi ekranami)
 #define BG_COLOR      0x0841 // Ciemny grafit (tło główne)
@@ -31,12 +32,18 @@ static const float DEFAULT_AMOUNT = 5.0f; // Domyślna ilość po otwarciu ekran
 // Otwieranie / zamykanie
 // ---------------------------------------------------------------------------
 
-void RefuelScreen::open(MotoState& state) {
+void RefuelScreen::open(MotoState& state, bool autoOpened) {
+    statePtr = &state;
+    touchActivity(); // Start odliczania 30 s do automatycznego powrotu
     // Domyślnie proponujemy 5 L, ale nie więcej niż zmieści się w baku
     amountL  = min(DEFAULT_AMOUNT, maxAmountL(state));
-    selected = ITEM_PLUS;
+    // Przy pełnym baku zaznaczamy ANULUJ, żeby przypadkowe ACTION niczego nie zmieniło
+    if (isTankFull(state))  selected = ITEM_CANCEL;
+    else if (autoOpened)    selected = ITEM_FULL;  // Po starcie z prawie pustym bakiem najczęściej tankujemy do pełna
+    else                    selected = ITEM_PLUS;
     if (screenManager) screenManager->showOverlay(this, state);
-    Serial.println("[Refuel] Otwarto ekran tankowania");
+    Serial.println(autoOpened ? "[Refuel] Malo paliwa po starcie - otwarto ekran tankowania"
+                              : "[Refuel] Otwarto ekran tankowania");
 }
 
 void RefuelScreen::close(MotoState& state) {
@@ -56,6 +63,15 @@ float RefuelScreen::maxAmountL(const MotoState& state) const {
     return floorf(freeSpaceL(state) / AMOUNT_STEP) * AMOUNT_STEP;
 }
 
+bool RefuelScreen::isTankFull(const MotoState& state) const {
+    return maxAmountL(state) < AMOUNT_STEP; // Nie zmieści się nawet 0.5 L
+}
+
+bool RefuelScreen::isItemEnabled(const MotoState& state, uint8_t item) const {
+    if (!isTankFull(state)) return true;
+    return item == ITEM_FULL || item == ITEM_CANCEL; // Przy pełnym baku tylko DO PELNA i ANULUJ
+}
+
 void RefuelScreen::changeAmount(const MotoState& state, int steps) {
     float maxL = maxAmountL(state);
     amountL = constrain(amountL + steps * AMOUNT_STEP, min(AMOUNT_STEP, maxL), maxL);
@@ -63,6 +79,7 @@ void RefuelScreen::changeAmount(const MotoState& state, int steps) {
 }
 
 void RefuelScreen::activate(MotoState& state, uint8_t item) {
+    if (!isItemEnabled(state, item)) return; // Nieaktywny przycisk (np. + przy pełnym baku)
     switch (item) {
         case ITEM_MINUS:
             changeAmount(state, -1);
@@ -75,7 +92,6 @@ void RefuelScreen::activate(MotoState& state, uint8_t item) {
             close(state);
             break;
         case ITEM_ADD:
-            if (amountL <= 0.0f) break; // Bak pełny - nic do dolania
             if (fuelCalculator) fuelCalculator->addFuel(state, amountL);
             close(state);
             break;
@@ -90,22 +106,29 @@ void RefuelScreen::activate(MotoState& state, uint8_t item) {
 // ---------------------------------------------------------------------------
 
 bool RefuelScreen::onModeClick(MotoState& state) {
-    selected = (selected + 1) % ITEM_COUNT; // Następna opcja
+    touchActivity();
+    // Następna aktywna opcja (przy pełnym baku pomija -, + i DOLEJ)
+    do {
+        selected = (selected + 1) % ITEM_COUNT;
+    } while (!isItemEnabled(state, selected));
     controlsDirty = true;
     return true;
 }
 
 bool RefuelScreen::onModeLongPress(MotoState& state) {
+    touchActivity();
     close(state); // Anuluj i wróć
     return true;
 }
 
 bool RefuelScreen::onActionClick(MotoState& state) {
+    touchActivity();
     activate(state, selected); // Wykonaj zaznaczoną opcję
     return true;               // Blokuje globalną zmianę jasności
 }
 
 bool RefuelScreen::onActionLongPress(MotoState& state) {
+    touchActivity();
     activate(state, ITEM_FULL); // Skrót: do pełna
     return true;
 }
@@ -117,6 +140,7 @@ bool RefuelScreen::onActionLongPress(MotoState& state) {
 void RefuelScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     controlsDirty  = true;
     lastDrawnFuelL = -1.0f;
+    lastShownSec   = -1;
     tft.fillScreen(BG_COLOR);
 
     tft.setTextColor(ACCENT_BLUE, BG_COLOR);
@@ -139,6 +163,22 @@ void RefuelScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
 }
 
 void RefuelScreen::update(TFT_eSPI& tft, const MotoState& state) {
+    // Automatyczny powrót do ekranu jazdy po 30 s bez naciśnięcia przycisku
+    unsigned long idleMs = millis() - lastActivityMs;
+    if (idleMs >= Config::REFUEL_TIMEOUT_MS) {
+        Serial.println("[Refuel] Brak reakcji - powrot do ekranu jazdy");
+        if (statePtr) close(*statePtr);
+        return;
+    }
+    int secLeft = (int)((Config::REFUEL_TIMEOUT_MS - idleMs + 999) / 1000);
+    if (secLeft != lastShownSec) {
+        lastShownSec = secLeft;
+        tft.setTextColor(TEXT_MUTED, BG_COLOR);
+        tft.setTextPadding(80);
+        tft.drawString("powrot za " + String(secLeft) + " s", 80, 6, 1);
+        tft.setTextPadding(0);
+    }
+
     // Karta paliwa: odświeżamy po zmianie wartości, ale nie częściej niż co 500 ms
     unsigned long now = millis();
     if (controlsDirty || (now - lastFuelDrawMs > 500 && fabsf(state.fuelInTankL - lastDrawnFuelL) >= 0.05f)) {
@@ -192,23 +232,32 @@ void RefuelScreen::drawFuelCard(TFT_eSPI& tft, const MotoState& state) {
 }
 
 void RefuelScreen::drawControls(TFT_eSPI& tft, const MotoState& state) {
-    bool tankFull = maxAmountL(state) <= 0.0f;
+    bool  tankFull = isTankFull(state);
+    float afterL   = min(state.tankCapacityL, state.fuelInTankL + amountL); // Stan po dolaniu
+    uint16_t pmColor = tankFull ? BORDER_COLOR : TFT_WHITE; // Wyszarzone - i + przy pełnym baku
 
     // Przyciski - / +
-    drawButton(tft, MINUS_X, AMT_Y, PM_W, AMT_H, "-", TFT_WHITE, selected == ITEM_MINUS, 4);
-    drawButton(tft, PLUS_X,  AMT_Y, PM_W, AMT_H, "+", TFT_WHITE, selected == ITEM_PLUS,  4);
+    drawButton(tft, MINUS_X, AMT_Y, PM_W, AMT_H, "-", pmColor, selected == ITEM_MINUS, 4);
+    drawButton(tft, PLUS_X,  AMT_Y, PM_W, AMT_H, "+", pmColor, selected == ITEM_PLUS,  4);
 
     // Wybrana ilość oraz stan baku po dolaniu
-    tft.setTextColor(tankFull ? TEXT_MUTED : TFT_WHITE, CARD_COLOR);
     tft.setTextPadding(150);
-    tft.drawCentreString(tankFull ? String("BAK PELNY") : String("+" + String(amountL, 1) + " L"), 160, AMT_Y + 18, 4);
-    tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-    tft.drawCentreString("po: " + String(state.fuelInTankL + amountL, 1) + " L", 160, AMT_Y + 46, 1);
+    if (tankFull) {
+        tft.setTextColor(ACCENT_RED, CARD_COLOR);
+        tft.drawCentreString("BAK PELNY", 160, AMT_Y + 18, 4);
+        tft.setTextColor(TEXT_MUTED, CARD_COLOR);
+        tft.drawCentreString("nie mozna dolac paliwa", 160, AMT_Y + 46, 1);
+    } else {
+        tft.setTextColor(TFT_WHITE, CARD_COLOR);
+        tft.drawCentreString("+" + String(amountL, 1) + " L", 160, AMT_Y + 18, 4);
+        tft.setTextColor(TEXT_MUTED, CARD_COLOR);
+        tft.drawCentreString("po: " + String(afterL, 1) + " L", 160, AMT_Y + 46, 1);
+    }
     tft.setTextPadding(0);
 
     // Dolny rząd: DO PELNA / DOLEJ / ANULUJ
     drawButton(tft, FULL_X,   BTN_Y, BTN_W, BTN_H, "DO PELNA", ACCENT_GREEN, selected == ITEM_FULL, 2);
-    drawButton(tft, ADD_X,    BTN_Y, BTN_W, BTN_H, "DOLEJ",    tankFull ? TEXT_MUTED : ACCENT_BLUE,
+    drawButton(tft, ADD_X,    BTN_Y, BTN_W, BTN_H, "DOLEJ",    tankFull ? BORDER_COLOR : ACCENT_BLUE,
                selected == ITEM_ADD, 2);
     drawButton(tft, CANCEL_X, BTN_Y, BTN_W, BTN_H, "ANULUJ",   TEXT_MUTED, selected == ITEM_CANCEL, 2);
 }

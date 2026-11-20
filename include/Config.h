@@ -12,6 +12,23 @@ constexpr uint8_t PIN_TFT_BL     = 38; // Fizyczny pin podświetlenia ekranu w L
     constexpr uint8_t PIN_BTN_MODE     = 15; // Niebieski przycisk nawigacji (GPIO 15)
     constexpr uint8_t PIN_BTN_ACTION   = 16; // Czerwony przycisk akcji (GPIO 16)
 
+    // --- EKRAN TANKOWANIA ---
+    constexpr float         REFUEL_PROMPT_L   = 3.0f;  // Poniżej tej ilości paliwa [L] ekran Tankowania otwiera się sam po starcie
+    constexpr unsigned long REFUEL_TIMEOUT_MS = 30000; // Bez naciśnięcia przycisku przez ten czas ekran wraca do jazdy [ms]
+
+    // --- AUTOMATYCZNA KALIBRACJA SPALANIA (przy tankowaniu do pełna) ---
+    constexpr float CAL_MIN_BURNED_L = 5.0f;  // Minimalne spalone paliwo od poprzedniego "do pełna", by kalibrować [L]
+    constexpr float CAL_MAX_RATIO    = 1.30f; // Odrzucamy wynik, gdy różnica komputer/dystrybutor > 30% (pomyłka?)
+    constexpr float CAL_FACTOR_MIN   = 0.70f; // Dopuszczalny zakres mnożnika kalibracji
+    constexpr float CAL_FACTOR_MAX   = 1.30f;
+
+    // --- DANE TESTOWE ---
+    // true = przy każdym starcie w baku zostaje TEST_FUEL_LEFT_L litrów (do testu automatycznego ekranu Tankowania).
+    // PRZED JAZDĄ USTAW false, inaczej po każdym uruchomieniu stan baku będzie nadpisywany!
+    constexpr bool  TEST_LOW_FUEL_ON_BOOT = true;
+    constexpr float TEST_FUEL_LEFT_L      = 2.0f;  // Ile litrów zostaje w baku przy starcie
+    constexpr float TEST_AVG_FUEL100      = 5.5f;  // Średnie spalanie z baku przyjęte w teście [L/100km]
+
     // --- STAŁE SILNIKA BENELLI TRK 702 ---
     constexpr float ENGINE_DISPLACEMENT = 0.698f; // Pojemność skokowa w litrach (698 cm3)
     constexpr float VOLUMETRIC_EFF      = 0.84f;  // Szacowana sprawność wolumetryczna silnika
