@@ -21,7 +21,7 @@ void TripsScreen::initSdAndLoad(MotoState& state) {
 
         // Jeśli plik CSV jeszcze nie istnieje, tworzymy go z wierszem nagłówkowym dla Excela
         if (!SD_MMC.exists("/historia_tras.csv")) {
-            File file = SD_MMC.open("/historia_tras.csv", FILE_WRITE);
+            fs::File file = SD_MMC.open("/historia_tras.csv", FILE_WRITE);
             if (file) {
                 file.println("Nr_Trasy;Czas_min;Dystans_km;Srednie_spalanie_L100;Srednia_predkosc_kmh");
                 file.close();
@@ -56,7 +56,7 @@ void TripsScreen::archiveCurrentTrip(MotoState& state, int durationMin, float di
 
 // Dopisuje pojedynczy wiersz danych w formacie CSV na kartę microSD
 void TripsScreen::saveToSdCsv(const TripRecord& rec) {
-    File file = SD_MMC.open("/historia_tras.csv", FILE_APPEND);
+    fs::File file = SD_MMC.open("/historia_tras.csv", FILE_APPEND);
     if (file) {
         file.printf("%d;%d;%.1f;%.1f;%d\n",
                     rec.id, rec.durationMin, rec.distanceKm, rec.avgFuel100, rec.avgSpeedKmh);
