@@ -1,17 +1,7 @@
 #include "RefuelScreen.h"
+#include "Theme.h" // Wspólna paleta kolorów
 #include "Config.h"
 
-// Paleta kolorów w formacie RGB565 (spójna z pozostałymi ekranami)
-#define BG_COLOR      0x0841 // Ciemny grafit (tło główne)
-#define CARD_COLOR    0x10A3 // Ciemnoszary (wnętrze kafelków)
-#define HIGHLIGHT_BG  0x1B4F // Granatowy (tło zaznaczonej opcji)
-#define BORDER_COLOR  0x2965 // Szary (obramowania kafelków)
-#define TEXT_MUTED    0x8C71 // Przygaszony jasnoszary (etykiety)
-#define ACCENT_GREEN  0x07E0 // Zielony (pełny bak, "DO PELNA", "ZAPISZ")
-#define ACCENT_BLUE   0x05FF // Błękitny (nagłówek, zasięg, "DOLEJ")
-#define ACCENT_YELLOW 0xFFE0 // Żółty (rezerwa)
-#define ACCENT_RED    0xF800 // Czerwony (prawie pusty bak)
-#define BAR_PREVIEW   0x0320 // Ciemnozielony (podgląd stanu po dolaniu na pasku)
 
 // --- UKŁAD EKRANU 320x240 ---
 // Górna karta (stan paliwa / informacje o kalibracji)

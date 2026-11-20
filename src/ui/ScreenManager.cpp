@@ -1,5 +1,6 @@
 #include "ScreenManager.h"
 #include "Config.h"
+#include "Theme.h"
 #include "BootLogo.h" // Dołączamy plik z naszą grafiką startową
 
 void ScreenManager::init() {
@@ -192,7 +193,7 @@ void ScreenManager::drawPageIndicator() {
     int startX = 308 - (screenCount * 12);
     for (uint8_t i = 0; i < screenCount; i++) {
         // Aktywna strona rysowana jest na zielono, pozostałe na ciemnoszaro
-        uint16_t color = (i == activeIndex) ? 0x07E0 : 0x4A69;
+        uint16_t color = (i == activeIndex) ? ACCENT_GREEN : DOT_INACTIVE;
         tft.fillCircle(startX + (i * 12), 10, 3, color);
     }
 }

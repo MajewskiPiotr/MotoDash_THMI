@@ -1,14 +1,7 @@
 #include "RidingScreen.h"
+#include "Theme.h" // Wspólna paleta kolorów
 #include "Config.h"
 
-// Paleta kolorów w formacie RGB565
-#define BG_COLOR     0x0841 // Ciemny grafit (tło główne)
-#define CARD_COLOR   0x10A3 // Ciemnoszary (wnętrze kafelków)
-#define BORDER_COLOR 0x2965 // Szary (obramowania kafelków)
-#define TEXT_MUTED   0x8C71 // Przygaszony jasnoszary (etykiety)
-#define ACCENT_GREEN 0x07E0 // Zielony (napięcie akumulatora, poprawne ciśnienie)
-#define ACCENT_BLUE  0x05FF // Błękitny (zasięg oraz ostrzeżenie o gołoledzi)
-#define ACCENT_RED   0xF800 // Czerwony (alarm przegrzania silnika lub spadku ciśnienia opon)
 
 // Rysuje statyczny układ kafelków (wywoływane raz przy wejściu na Ekran 1)
 void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
@@ -87,7 +80,7 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
     // 5. Paliwo w baku (lewa kolumna) i szacowany zasięg (prawa kolumna)
     float fuelRatio = (state.tankCapacityL > 0.0f) ? state.fuelInTankL / state.tankCapacityL : 0.0f;
     uint16_t fuelCol = (fuelRatio < 0.10f) ? ACCENT_RED      // Rezerwa krytyczna
-                     : (fuelRatio < 0.25f) ? 0xFFE0          // Żółty - niski poziom
+                     : (fuelRatio < 0.25f) ? ACCENT_YELLOW   // Niski poziom
                      : TFT_WHITE;
     tft.setTextColor(fuelCol, CARD_COLOR);
     tft.setTextPadding(66);

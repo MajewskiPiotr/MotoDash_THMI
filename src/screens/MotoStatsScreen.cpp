@@ -1,12 +1,6 @@
 #include "MotoStatsScreen.h"
+#include "Theme.h" // Wspólna paleta kolorów
 
-#define BG_COLOR     0x0841 // Ciemny grafit (tło główne)
-#define CARD_COLOR   0x10A3 // Ciemnoszary (wnętrze kafelków)
-#define BORDER_COLOR 0x2965 // Szary (ramki kafelków)
-#define TEXT_MUTED   0x8C71 // Jasnoszary (opisy i legenda)
-#define ACCENT_GREEN 0x07E0 // Zielony (prawidłowe wartości)
-#define ACCENT_BLUE  0x05FF // Błękitny (nagłówek ekranu i prędkość max)
-#define ACCENT_RED   0xF800 // Czerwony (alarm słabej baterii lub błędów ECU)
 
 // Rysuje statyczny układ 4 kafelków ze statystykami motocykla
 void MotoStatsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {

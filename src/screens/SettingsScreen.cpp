@@ -1,14 +1,7 @@
 #include "SettingsScreen.h"
+#include "Theme.h" // Wspólna paleta kolorów
 #include <Preferences.h> // Wbudowana biblioteka ESP32 do obsługi nieulotnej pamięci Flash (NVS)
 
-// Paleta kolorów w formacie RGB565
-#define BG_COLOR     0x0841 // Ciemny grafit (tło główne)
-#define CARD_COLOR   0x10A3 // Ciemnoszary (tło nieaktywnego wiersza)
-#define HIGHLIGHT_BG 0x1B4F // Granatowy (tło aktualnie zaznaczonego wiersza)
-#define BORDER_COLOR 0x2965 // Szary (obramowanie listy)
-#define TEXT_MUTED   0x8C71 // Przygaszony jasnoszary (nieaktywne napisy i legenda)
-#define ACCENT_GREEN 0x07E0 // Zielony (wartość aktywnego parametru)
-#define ACCENT_BLUE  0x05FF // Błękitny (nagłówek ekranu)
 
 // Wczytuje parametry konfiguracji z pamięci nieulotnej przy starcie systemu
 void SettingsScreen::loadFromNvs(MotoState& state) {

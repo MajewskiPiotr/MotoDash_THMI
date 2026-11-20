@@ -1,18 +1,9 @@
 #include "AnaliticScreen.h"
+#include "Theme.h" // Wspólna paleta kolorów
 #include "Config.h"
 #include <SPI.h>
 #include <SD.h> // Wbudowana biblioteka ESP32 do obsługi karty pamięci microSD
 
-// Paleta kolorów w formacie RGB565
-#define BG_COLOR      0x0841 // Ciemny grafit (tło główne)
-#define CARD_COLOR    0x10A3 // Ciemnoszary (tło wierszy parzystych)
-#define ROW_ALT_COLOR 0x18E4 // Nieco jaśniejszy grafit (tło wierszy nieparzystych - efekt zebry)
-#define HEADER_BG     0x1B4F // Granatowy (tło nagłówka kolumn tabeli)
-#define BORDER_COLOR  0x2965 // Szary (ramki tabeli)
-#define TEXT_MUTED    0x8C71 // Przygaszony szary (etykiety i komunikaty pomocnicze)
-#define ACCENT_GREEN  0x07E0 // Zielony (dystans i status OK)
-#define ACCENT_BLUE   0x05FF // Błękitny (tytuł ekranu i numer trasy)
-#define ACCENT_YELLOW 0xFFE0 // Żółty (spalanie i ostrzeżenie o braku karty SD)
 
 // Piny czytnika kart microSD na płytce LilyGO T-HMI
 static constexpr uint8_t SD_CS   = 51;
