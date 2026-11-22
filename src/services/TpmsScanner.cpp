@@ -47,7 +47,9 @@ void TpmsScanner::init() {
     NimBLEDevice::init("");
     NimBLEScan* scan = NimBLEDevice::getScan();
     scan->setAdvertisedDeviceCallbacks(new TpmsAdvCallbacks(), true); // true = także powtórzenia ogłoszeń
-    scan->setActiveScan(false); // Pasywnie: tylko słuchamy, nic nie wysyłamy
+    // Normalnie pasywnie (tylko słuchamy). W trybie rozpoznawania aktywnie: pytamy urządzenia o dodatkowe
+    // dane (scan response) - niektóre czujniki podają nazwę i pomiary dopiero w odpowiedzi.
+    scan->setActiveScan(Config::TPMS_DEBUG_SCAN);
     scan->setInterval(160);     // 100 ms
     scan->setWindow(48);        // 30 ms - zostawia czas radia dla Wi-Fi
     scan->setMaxResults(0);     // Nie przechowujemy listy urządzeń (oszczędza RAM)
@@ -121,8 +123,10 @@ void TpmsScanner::onAdvertisement(const String& addr, const String& name, int rs
     // --- Tryb rozpoznawania: surowe dane z bliskich urządzeń z danymi producenta ---
     // Pomijamy szum od komputerów i telefonów: Microsoft (0x0006) i Apple (0x004C)
     bool noise = len >= 2 && ((mfg[0] == 0x06 && mfg[1] == 0x00) || (mfg[0] == 0x4C && mfg[1] == 0x00));
+    // Logujemy też urządzenia bez żadnych danych, jeśli są bardzo blisko płytki (sam adres też coś mówi)
     bool hasData = len >= 2 || serviceInfo.length() > 0 || name.length() > 0;
-    if (Config::TPMS_DEBUG_SCAN && !noise && hasData && rssi >= Config::TPMS_DEBUG_MIN_RSSI) {
+    bool veryClose = rssi >= Config::TPMS_DEBUG_MIN_RSSI + 10;
+    if (Config::TPMS_DEBUG_SCAN && !noise && (hasData || veryClose) && rssi >= Config::TPMS_DEBUG_MIN_RSSI) {
         static String lastAddr[8];
         static unsigned long lastAt[8] = {0};
         int slot = -1, oldest = 0;
@@ -130,7 +134,7 @@ void TpmsScanner::onAdvertisement(const String& addr, const String& name, int rs
             if (lastAddr[i] == addr) { slot = i; break; }
             if (lastAt[i] < lastAt[oldest]) oldest = i;
         }
-        if (slot >= 0 && millis() - lastAt[slot] < 15000) return; // To samo urządzenie najwyżej co 15 s
+        if (slot >= 0 && millis() - lastAt[slot] < 60000) return; // To samo urządzenie najwyżej co 60 s
         if (slot < 0) { slot = oldest; lastAddr[slot] = addr; }
         lastAt[slot] = millis();
 
