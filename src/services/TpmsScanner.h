@@ -16,7 +16,8 @@ public:
     void update(MotoState& state); // Wywoływać w loop(): przenosi odczyty do MotoState, pilnuje skanowania
 
     // Wywoływane z zadania Bluetooth (inny wątek!) - tylko zapis do bufora pod blokadą
-    void onAdvertisement(const String& addr, const String& name, int rssi, const uint8_t* mfg, size_t mfgLen);
+    void onAdvertisement(const String& addr, const String& name, int rssi, const uint8_t* mfg, size_t mfgLen,
+                         const String& serviceInfo);
 
 private:
     struct Reading {

@@ -9,9 +9,20 @@ class TpmsAdvCallbacks : public NimBLEAdvertisedDeviceCallbacks {
     void onResult(NimBLEAdvertisedDevice* dev) override {
         if (!s_instance) return;
         std::string mfg = dev->haveManufacturerData() ? dev->getManufacturerData() : std::string();
+        // Usługi i dane usług - tylko do trybu rozpoznawania (niektóre czujniki nadają dane tutaj)
+        String svc;
+        if (Config::TPMS_DEBUG_SCAN) {
+            for (int i = 0; i < (int)dev->getServiceDataCount(); i++) {
+                std::string d = dev->getServiceData(i);
+                svc += " usluga " + String(dev->getServiceDataUUID(i).toString().c_str()) + ":";
+                for (unsigned char c : d) { char b[4]; snprintf(b, sizeof(b), " %02X", c); svc += b; }
+            }
+            for (int i = 0; i < (int)dev->getServiceUUIDCount(); i++)
+                svc += " uuid " + String(dev->getServiceUUID(i).toString().c_str());
+        }
         s_instance->onAdvertisement(String(dev->getAddress().toString().c_str()),
                                     dev->haveName() ? String(dev->getName().c_str()) : String(""),
-                                    dev->getRSSI(), (const uint8_t*)mfg.data(), mfg.size());
+                                    dev->getRSSI(), (const uint8_t*)mfg.data(), mfg.size(), svc);
     }
 };
 
@@ -44,7 +55,8 @@ int TpmsScanner::wheelFor(const String& addr, uint8_t sensorNo) const {
     return -1;
 }
 
-void TpmsScanner::onAdvertisement(const String& addr, const String& name, int rssi, const uint8_t* mfg, size_t len) {
+void TpmsScanner::onAdvertisement(const String& addr, const String& name, int rssi, const uint8_t* mfg, size_t len,
+                                  const String& serviceInfo) {
     // --- Format nakrętek TPMS (18 bajtów danych producenta, firma 0x0001, adres zaczyna się od 0x80..0x83) ---
     bool known = len == 18 && mfg[0] == 0x00 && mfg[1] == 0x01 && mfg[2] >= 0x80 && mfg[2] <= 0x83;
     if (known) {
@@ -75,7 +87,10 @@ void TpmsScanner::onAdvertisement(const String& addr, const String& name, int rs
     }
 
     // --- Tryb rozpoznawania: surowe dane z bliskich urządzeń z danymi producenta ---
-    if (Config::TPMS_DEBUG_SCAN && len >= 4 && rssi >= Config::TPMS_DEBUG_MIN_RSSI) {
+    // Pomijamy szum od komputerów i telefonów: Microsoft (0x0006) i Apple (0x004C)
+    bool noise = len >= 2 && ((mfg[0] == 0x06 && mfg[1] == 0x00) || (mfg[0] == 0x4C && mfg[1] == 0x00));
+    bool hasData = len >= 2 || serviceInfo.length() > 0 || name.length() > 0;
+    if (Config::TPMS_DEBUG_SCAN && !noise && hasData && rssi >= Config::TPMS_DEBUG_MIN_RSSI) {
         static String lastAddr[8];
         static unsigned long lastAt[8] = {0};
         int slot = -1, oldest = 0;
@@ -89,8 +104,8 @@ void TpmsScanner::onAdvertisement(const String& addr, const String& name, int rs
 
         String hex;
         for (size_t i = 0; i < len; i++) { char b[4]; snprintf(b, sizeof(b), "%02X ", mfg[i]); hex += b; }
-        Serial.printf("[TPMS-skan] %s RSSI %d nazwa \"%s\" dane(%u): %s\n",
-                      addr.c_str(), rssi, name.c_str(), (unsigned)len, hex.c_str());
+        Serial.printf("[TPMS-skan] %s RSSI %d nazwa \"%s\" dane(%u): %s%s\n",
+                      addr.c_str(), rssi, name.c_str(), (unsigned)len, hex.c_str(), serviceInfo.c_str());
     }
 }
 
