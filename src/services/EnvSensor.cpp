@@ -36,7 +36,7 @@ void EnvSensor::update(MotoState& state) {
     // Pobieramy aktualny pomiar i wpisujemy do współdzielonego obiektu MotoState
     if (readAht20Temp(measuredTemp)) {
         state.ambientTempC = measuredTemp;
-        Serial.println("[EnvSensor] Temperatura otoczenia: " + String(state.ambientTempC, 1) + " C");
+      //  Serial.println("[EnvSensor] Temperatura otoczenia: " + String(state.ambientTempC, 1) + " C");
     } else {
         Serial.println("[EnvSensor] Blad odczytu danych z czujnika AHT20");
     }

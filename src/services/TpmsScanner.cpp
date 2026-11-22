@@ -57,6 +57,8 @@ int TpmsScanner::wheelFor(const String& addr, uint8_t sensorNo) const {
 
 void TpmsScanner::onAdvertisement(const String& addr, const String& name, int rssi, const uint8_t* mfg, size_t len,
                                   const String& serviceInfo) {
+    advCount++;
+    if (rssi > advBestRssi) advBestRssi = rssi;
     // --- Format nakrętek TPMS (18 bajtów danych producenta, firma 0x0001, adres zaczyna się od 0x80..0x83) ---
     bool known = len == 18 && mfg[0] == 0x00 && mfg[1] == 0x01 && mfg[2] >= 0x80 && mfg[2] <= 0x83;
     if (known) {
@@ -122,6 +124,15 @@ void TpmsScanner::apply(Reading& r, bool& ok, float& bar, int& tempC, int& batt)
 void TpmsScanner::update(MotoState& state) {
     apply(front, state.frontTpmsOk, state.frontBar, state.frontTempC, state.frontBattPct);
     apply(rear,  state.rearTpmsOk,  state.rearBar,  state.rearTempC,  state.rearBattPct);
+
+    // Diagnostyka co 30 s: potwierdza, że Bluetooth w ogóle odbiera ogłoszenia
+    if (started && Config::TPMS_DEBUG_SCAN && millis() - lastStatsMs > 30000) {
+        lastStatsMs = millis();
+        Serial.printf("[TPMS] Diagnostyka: %u ogloszen BLE w 30 s, najsilniejszy sygnal %d dBm. Przod: %s, tyl: %s\n",
+                      (unsigned)advCount, advBestRssi, state.frontTpmsOk ? "OK" : "brak", state.rearTpmsOk ? "OK" : "brak");
+        advCount = 0;
+        advBestRssi = -127;
+    }
 
     // Skanowanie potrafi się zatrzymać (np. przy włączaniu Wi-Fi) - wznawiamy co 5 s
     if (started && millis() - lastScanCheckMs > 5000) {
