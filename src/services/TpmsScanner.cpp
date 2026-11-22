@@ -4,6 +4,17 @@
 
 static TpmsScanner* s_instance = nullptr;
 
+// Czy tekst (wielkie litery, bez separatorów) zawiera identyfikator z Config - w zwykłej lub odwróconej kolejności bajtów
+static bool containsDebugId(const String& hexNoSep) {
+    String id = String(Config::TPMS_DEBUG_ID);
+    id.toUpperCase();
+    if (id.length() < 4) return false;
+    if (hexNoSep.indexOf(id) >= 0) return true;
+    String rev;
+    for (int i = (int)id.length() - 2; i >= 0; i -= 2) rev += id.substring(i, i + 2); // np. C225B17B -> 7BB125C2
+    return hexNoSep.indexOf(rev) >= 0;
+}
+
 // Callback NimBLE - wywoływany dla każdego odebranego ogłoszenia (także powtórzeń)
 class TpmsAdvCallbacks : public NimBLEAdvertisedDeviceCallbacks {
     void onResult(NimBLEAdvertisedDevice* dev) override {
@@ -59,6 +70,25 @@ void TpmsScanner::onAdvertisement(const String& addr, const String& name, int rs
                                   const String& serviceInfo) {
     advCount++;
     if (rssi > advBestRssi) advBestRssi = rssi;
+
+    // --- Szukanie czujnika po identyfikatorze z obudowy (adres + wszystkie dane, bez filtra RSSI) ---
+    if (Config::TPMS_DEBUG_SCAN && Config::TPMS_DEBUG_ID[0]) {
+        String all = addr + " " + serviceInfo + " ";
+        String hexSp;
+        for (size_t i = 0; i < len; i++) { char b[4]; snprintf(b, sizeof(b), "%02X ", mfg[i]); hexSp += b; }
+        all += hexSp;
+        all.toUpperCase();
+        String packed;
+        for (unsigned int i = 0; i < all.length(); i++) { char c = all[i]; if (isxdigit((unsigned char)c)) packed += c; }
+        if (containsDebugId(packed)) {
+            static unsigned long lastIdLog = 0;
+            if (millis() - lastIdLog > 3000) {
+                lastIdLog = millis();
+                Serial.printf("[TPMS-ID] ZNALEZIONO: %s RSSI %d nazwa \"%s\" dane(%u): %s%s\n",
+                              addr.c_str(), rssi, name.c_str(), (unsigned)len, hexSp.c_str(), serviceInfo.c_str());
+            }
+        }
+    }
     // --- Format nakrętek TPMS (18 bajtów danych producenta, firma 0x0001, adres zaczyna się od 0x80..0x83) ---
     bool known = len == 18 && mfg[0] == 0x00 && mfg[1] == 0x01 && mfg[2] >= 0x80 && mfg[2] <= 0x83;
     if (known) {

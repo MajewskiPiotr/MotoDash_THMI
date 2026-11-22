@@ -39,6 +39,9 @@ namespace Config {
     // Przydaje się, gdy czujnik nadaje w innym formacie - wyślij log, a dopiszemy dekoder. Potem ustaw false.
     constexpr bool TPMS_DEBUG_SCAN = true;
     constexpr int  TPMS_DEBUG_MIN_RSSI = -65; // Tylko urządzenia blisko płytki (połóż czujnik obok)
+    // Identyfikator z obudowy czujnika (np. "C225B17B"). Każde ogłoszenie, którego adres lub dane zawierają
+    // ten ciąg (w dowolnej kolejności bajtów), jest logowane jako "[TPMS-ID]" - bez filtra siły sygnału.
+    constexpr const char* TPMS_DEBUG_ID = "C225B17B";
 
     // --- HOTSPOT WI-FI (ekran 5) ---
     constexpr const char* WIFI_AP_SSID = "MotoDash";    // Nazwa sieci widoczna w telefonie
