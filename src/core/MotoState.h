@@ -42,10 +42,15 @@ struct MotoState {
     float altitudeM       = 120.0f;// Aktualna wysokość n.p.m. z barometru [m]
 
     // --- DANE Z OPON (BLUETOOTH BLE TPMS) ---
-    float frontBar        = 2.3f;  // Ciśnienie w przedniej oponie [bar]
-    int   frontTempC      = 24;    // Temperatura powietrza w przedniej oponie [°C]
-    float rearBar         = 2.6f;  // Ciśnienie w tylnej oponie [bar]
-    int   rearTempC       = 27;    // Temperatura powietrza w tylnej oponie [°C]
+    // Wartości mają sens tylko, gdy *TpmsOk == true (świeży odczyt z czujnika)
+    bool  frontTpmsOk     = false; // Czy jest aktualny odczyt z czujnika przedniego
+    float frontBar        = 0.0f;  // Ciśnienie w przedniej oponie [bar]
+    int   frontTempC      = 0;     // Temperatura powietrza w przedniej oponie [°C]
+    int   frontBattPct    = -1;    // Bateria czujnika przedniego [%] (-1 = nieznana)
+    bool  rearTpmsOk      = false; // Czy jest aktualny odczyt z czujnika tylnego
+    float rearBar         = 0.0f;  // Ciśnienie w tylnej oponie [bar]
+    int   rearTempC       = 0;     // Temperatura powietrza w tylnej oponie [°C]
+    int   rearBattPct     = -1;    // Bateria czujnika tylnego [%] (-1 = nieznana)
     
     // --- WYLICZENIA SPALANIA, DYSTANSU I ZASIĘGU ---
     float instFuel100       = 0.0f;  // Spalanie chwilowe [L/100km w ruchu lub L/h na postoju]

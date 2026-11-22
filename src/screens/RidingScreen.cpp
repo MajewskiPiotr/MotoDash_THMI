@@ -91,14 +91,20 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
     tft.setTextPadding(0);
 
     // 6. Dolny pasek TPMS
-    bool alert = (state.frontBar < state.minFrontBar || state.rearBar < state.minRearBar);
+    // Alarm tylko dla czujników z aktualnym odczytem (brak danych to nie spadek ciśnienia)
+    bool alert = (state.frontTpmsOk && state.frontBar < state.minFrontBar) ||
+                 (state.rearTpmsOk  && state.rearBar  < state.minRearBar);
     uint16_t bg = alert ? ACCENT_RED : CARD_COLOR;
     uint16_t fg = alert ? TFT_WHITE : ACCENT_GREEN;
 
     tft.setTextPadding(135);
     tft.setTextColor(fg, bg);
-    tft.drawString("F: " + String(state.frontBar, 1) + "b (" + String(state.frontTempC) + "C)", 16, 208, 2);
-    tft.drawString("R: " + String(state.rearBar, 1) + "b (" + String(state.rearTempC) + "C)", 170, 208, 2);
+    tft.setTextColor(state.frontTpmsOk ? fg : (alert ? TFT_WHITE : TEXT_MUTED), bg);
+    tft.drawString(state.frontTpmsOk ? "F: " + String(state.frontBar, 1) + "b (" + String(state.frontTempC) + "C)"
+                                     : String("F: --"), 16, 208, 2);
+    tft.setTextColor(state.rearTpmsOk ? fg : (alert ? TFT_WHITE : TEXT_MUTED), bg);
+    tft.drawString(state.rearTpmsOk ? "R: " + String(state.rearBar, 1) + "b (" + String(state.rearTempC) + "C)"
+                                    : String("R: --"), 170, 208, 2);
 }
 
 // Długie przytrzymanie przycisku ACTION na ekranie jazdy resetuje paliwo po tankowaniu

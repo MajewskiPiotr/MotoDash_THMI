@@ -108,8 +108,9 @@ async function status(){try{const d=await (await fetch('/api/status')).json();
  $('temp').innerHTML=u(d.temp,'&deg;C');$('temp').className='val '+(d.temp>d.tempWarn?'red':'');
  $('volt').innerHTML=u(d.volt.toFixed(1),'V');$('amb').innerHTML=u(d.amb.toFixed(1),'&deg;C');$('amb').className='val '+(d.amb<3?'blu':'');
  $('cal').textContent=d.cal.toFixed(2);
- $('tf').innerHTML=u(d.fBar.toFixed(1),'bar, '+d.fTemp+'&deg;C');$('tf').className='val '+(d.fBar<d.minF?'red':'grn');
- $('tr').innerHTML=u(d.rBar.toFixed(1),'bar, '+d.rTemp+'&deg;C');$('tr').className='val '+(d.rBar<d.minR?'red':'grn');
+ const ty=(id,ok,b,t,bt,mn)=>{if(!ok){$(id).innerHTML='&mdash; <span class="unit">brak odczytu</span>';$(id).className='val';return}
+  $(id).innerHTML=u(b.toFixed(1),'bar, '+t+'&deg;C'+(bt>=0?', bat. '+bt+'%':''));$(id).className='val '+(b<mn?'red':'grn')};
+ ty('tf',d.fOk,d.fBar,d.fTemp,d.fBat,d.minF);ty('tr',d.rOk,d.rBar,d.rTemp,d.rBat,d.minR);
  if(!filled){const f=$('f');f.cal.value=d.cal.toFixed(2);f.tank.value=d.cap;f.minF.value=d.minF.toFixed(1);f.minR.value=d.minR.toFixed(1);f.alt.value=d.alt;filled=true}
 }catch(e){}}
 async function trips(){try{const d=await (await fetch('/api/trips')).json();
@@ -251,6 +252,10 @@ void WifiPortal::handleStatus() {
     j += ",\"fTemp\":"  + String(s.frontTempC);
     j += ",\"rBar\":"   + String(s.rearBar, 2);
     j += ",\"rTemp\":"  + String(s.rearTempC);
+    j += ",\"fOk\":"    + String(s.frontTpmsOk ? 1 : 0);
+    j += ",\"rOk\":"    + String(s.rearTpmsOk ? 1 : 0);
+    j += ",\"fBat\":"   + String(s.frontBattPct);
+    j += ",\"rBat\":"   + String(s.rearBattPct);
     j += ",\"minF\":"   + String(s.minFrontBar, 2);
     j += ",\"minR\":"   + String(s.minRearBar, 2);
     j += ",\"cal\":"    + String(s.fuelCalFactor, 3);

@@ -27,6 +27,19 @@ namespace Config {
     constexpr float CAL_FACTOR_MIN   = 0.70f; // Dopuszczalny zakres mnożnika kalibracji
     constexpr float CAL_FACTOR_MAX   = 1.30f;
 
+    // --- CZUJNIKI CIŚNIENIA W OPONACH (TPMS, Bluetooth LE) ---
+    // Tanie nakrętki TPMS mają numer 1-4 (zwykle na naklejce). Który numer jest na którym kole:
+    constexpr uint8_t TPMS_FRONT_NO = 1;  // Numer czujnika na przednim kole (0 = brak czujnika)
+    constexpr uint8_t TPMS_REAR_NO  = 2;  // Numer czujnika na tylnym kole  (0 = brak czujnika)
+    // Albo konkretny adres czujnika z logu "[TPMS]" (ma pierwszeństwo przed numerem), np. "80:ea:ca:11:22:33"
+    constexpr const char* TPMS_FRONT_MAC = "";
+    constexpr const char* TPMS_REAR_MAC  = "";
+    constexpr unsigned long TPMS_STALE_MS = 15UL * 60 * 1000; // Po tylu ms bez danych odczyt uznajemy za nieaktualny
+    // Tryb rozpoznawania: wypisuje w Serial Monitorze surowe dane z pobliskich urządzeń BLE (silny sygnał).
+    // Przydaje się, gdy czujnik nadaje w innym formacie - wyślij log, a dopiszemy dekoder. Potem ustaw false.
+    constexpr bool TPMS_DEBUG_SCAN = true;
+    constexpr int  TPMS_DEBUG_MIN_RSSI = -65; // Tylko urządzenia blisko płytki (połóż czujnik obok)
+
     // --- HOTSPOT WI-FI (ekran 5) ---
     constexpr const char* WIFI_AP_SSID = "MotoDash";    // Nazwa sieci widoczna w telefonie
     constexpr const char* WIFI_AP_PASS = "motodash123"; // Hasło (min. 8 znaków) - zmień na własne
