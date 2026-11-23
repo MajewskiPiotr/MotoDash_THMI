@@ -1,5 +1,6 @@
 #include "SettingsScreen.h"
 #include "Theme.h"
+#include "SmoothText.h"
 #include "Icons.h" // Wspólna paleta kolorów
 #include <Preferences.h> // Wbudowana biblioteka ESP32 do obsługi nieulotnej pamięci Flash (NVS)
 
@@ -40,11 +41,11 @@ void SettingsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.fillScreen(BG_COLOR);
 
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    tft.drawString("USTAWIENIA", 10, 6, 1);
+    SmoothText::str(tft, "USTAWIENIA", 10, 6, 1);
 
     // Dolna legenda podpowiadająca działanie przycisków w menu
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    tft.drawString("[MODE]: Wybor   [ACT]: +   [ACT 2s]: -", 10, 218, 1);
+    SmoothText::str(tft, "[MODE]: wybór   [ACT]: +   [ACT 2s]: -", 10, 218, 1);
 }
 
 // Rysuje listę 6 wierszy z aktualnymi wartościami
@@ -56,11 +57,11 @@ void SettingsScreen::update(TFT_eSPI& tft, const MotoState& state) {
     // Etykiety wyświetlanych parametrów
     const char* labels[TOTAL_ROWS] = {
         "Kalibracja spalania:",
-        "Pojemnosc baku:",
-        "Alarm TPMS Przod:",
-        "Alarm TPMS Tyl:",
-        "Wysokosc startowa:",
-        "ZAPISZ I WYJDZ"
+        "Pojemność baku:",
+        "Alarm TPMS przód:",
+        "Alarm TPMS tył:",
+        "Wysokość startowa:",
+        "ZAPISZ I WYJDŹ"
     };
 
     // Aktualne wartości sformatowane jako tekst
@@ -94,11 +95,11 @@ void SettingsScreen::update(TFT_eSPI& tft, const MotoState& state) {
 
         // Nazwa parametru (zaznaczona pozycja: jasny tekst na niebieskim tle)
         tft.setTextColor(isSelected ? TFT_WHITE : TEXT_MUTED, rowBg);
-        tft.drawString(labels[i], 42, y + 5, 2);
+        SmoothText::str(tft, labels[i], 42, y + 5, 2);
 
         // Rysuje wartość parametru wyrównaną do prawej krawędzi
         tft.setTextColor(isSelected ? ACCENT_GREEN : TFT_WHITE, rowBg);
-        tft.drawRightString(values[i], 300, y + 5, 2);
+        SmoothText::str(tft, values[i], 300, y + 5, 2, SmoothText::RIGHT);
     }
 }
 
@@ -140,7 +141,7 @@ bool SettingsScreen::onActionClick(MotoState& state) {
             state.baseAltitudeM += 20;
             if (state.baseAltitudeM > 2500) state.baseAltitudeM = 0;
             break;
-        case 5: // Ostatnia pozycja: "ZAPISZ I WYJDZ"
+        case 5: // Ostatnia pozycja: "ZAPISZ I WYJDŹ"
             saveToNvs(state);
             selectedRow = 0;
             if (screenManager) screenManager->goToFirstScreen(state);

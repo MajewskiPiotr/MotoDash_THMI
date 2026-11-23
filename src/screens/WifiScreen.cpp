@@ -1,5 +1,6 @@
 #include "WifiScreen.h"
 #include "Theme.h"
+#include "SmoothText.h"
 #include "Icons.h"
 #include "Config.h"
 
@@ -10,9 +11,9 @@ void WifiScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     dirty = true;
     tft.fillScreen(BG_COLOR);
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    tft.drawString("WI-FI", 10, 6, 1);
+    SmoothText::str(tft, "WI-FI", 10, 6, 1);
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    tft.drawString("[ACT]: wlacz / wylacz hotspot", 10, 218, 1);
+    SmoothText::str(tft, "[ACT]: włącz / wyłącz hotspot", 10, 218, 1);
 }
 
 void WifiScreen::update(TFT_eSPI& tft, const MotoState& state) {
@@ -34,30 +35,30 @@ void WifiScreen::update(TFT_eSPI& tft, const MotoState& state) {
     Icons::wifi(tft, 144, 30, active ? ACCENT_GREEN : TEXT_MUTED, CARD_COLOR);
 
     tft.setTextColor(active ? ACCENT_GREEN : TEXT_MUTED, CARD_COLOR);
-    tft.drawCentreString(active ? "HOTSPOT WLACZONY" : "HOTSPOT WYLACZONY", 160, 56, 4);
+    SmoothText::str(tft, active ? "HOTSPOT WŁĄCZONY" : "HOTSPOT WYŁĄCZONY", 160, 56, 4, SmoothText::CENTER);
 
     if (active) {
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawString("Siec:",  20, 92, 2);
-        tft.drawString("Haslo:", 20, 116, 2);
-        tft.drawString("Adres:", 20, 140, 2);
+        SmoothText::str(tft, "Sieć:",  20, 92, 2);
+        SmoothText::str(tft, "Hasło:", 20, 116, 2);
+        SmoothText::str(tft, "Adres:", 20, 140, 2);
         tft.setTextColor(TFT_WHITE, CARD_COLOR);
-        tft.drawString(Config::WIFI_AP_SSID, 84, 92, 2);
-        tft.drawString(Config::WIFI_AP_PASS, 84, 116, 2);
+        SmoothText::str(tft, Config::WIFI_AP_SSID, 84, 92, 2);
+        SmoothText::str(tft, Config::WIFI_AP_PASS, 84, 116, 2);
         tft.setTextColor(ACCENT_BLUE, CARD_COLOR);
-        tft.drawString(portal->address(), 84, 140, 2);
+        SmoothText::str(tft, portal->address(), 84, 140, 2);
 
         tft.setTextColor(clients > 0 ? ACCENT_GREEN : TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString(clients > 0 ? "Polaczone urzadzenia: " + String(clients)
-                                         : "Czekam na polaczenie telefonu...", 160, 178, 2);
+        SmoothText::str(tft, clients > 0 ? "Połączone urządzenia: " + String(clients)
+                                         : "Czekam na połączenie telefonu...", 160, 178, 2, SmoothText::CENTER);
     } else {
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString("Kliknij ACTION, aby wlaczyc.", 160, 100, 2);
-        tft.drawCentreString("Potem polacz telefon z siecia", 160, 126, 2);
-        tft.drawCentreString(String("\"") + Config::WIFI_AP_SSID + "\" i otworz strone.", 160, 146, 2);
+        SmoothText::str(tft, "Kliknij ACTION, aby włączyć.", 160, 100, 2, SmoothText::CENTER);
+        SmoothText::str(tft, "Potem połącz telefon z siecią", 160, 126, 2, SmoothText::CENTER);
+        SmoothText::str(tft, String("\"") + Config::WIFI_AP_SSID + "\" i otwórz stronę.", 160, 146, 2, SmoothText::CENTER);
         if (portal->wasStoppedByRiding()) {
             tft.setTextColor(ACCENT_YELLOW, CARD_COLOR);
-            tft.drawCentreString("Wylaczony automatycznie podczas jazdy", 160, 178, 2);
+            SmoothText::str(tft, "Wyłączony automatycznie podczas jazdy", 160, 178, 2, SmoothText::CENTER);
         }
     }
 }

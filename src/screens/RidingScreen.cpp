@@ -40,7 +40,7 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     card(tft, 162, 22, 150, 84);
     Icons::droplet(tft, 170, 30, ACCENT_BLUE);
     label(tft, "SPALANIE", 194, 33, 80);
-    label(tft, "SREDNIO", 252, 58, 56, RIGHT);
+    label(tft, "ŚREDNIO", 252, 58, 56, RIGHT);
 
     // Środkowy rząd: akumulator | otoczenie | paliwo + zasięg
     card(tft, 8, 112, 72, 78);
@@ -52,7 +52,7 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     Icons::fuelPump(tft, 170, 120, ACCENT_YELLOW, CARD);
     label(tft, "PALIWO", 192, 123, 48);
     Icons::road(tft, 242, 120, ACCENT_BLUE, CARD);
-    label(tft, "ZASIEG", 264, 123, 44, RIGHT);
+    label(tft, "ZASIĘG", 264, 123, 44, RIGHT);
 }
 
 // Odświeża wartości (co ~150 ms) - każde pole rysuje się tylko po zmianie
@@ -116,7 +116,7 @@ void RidingScreen::drawTire(TFT_eSPI& tft, int idx, bool ok, float bar, int temp
         fTireBar[idx].reset(); fTireTemp[idx].reset();
         card(tft, x, 196, 150, 40, bg);
         Icons::tire(tft, x + 8, 206, alert ? TFT_WHITE : (ok ? ACCENT_GREEN : TEXT_MUTED), bg);
-        label(tft, idx == 0 ? "PRZOD" : "TYL", x + 36, 199, 60, LEFT, txtC, bg);
+        label(tft, idx == 0 ? "PRZÓD" : "TYL", x + 36, 199, 60, LEFT, txtC, bg);
         if (!ok) SmoothText::draw(tft, FontNumM, "-", x + 36, 213, 50, 18, LEFT, TEXT_MUTED, bg);
     }
     if (ok) {

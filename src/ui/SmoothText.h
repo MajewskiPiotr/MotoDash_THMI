@@ -10,6 +10,12 @@ namespace SmoothText {
     void draw(TFT_eSPI& tft, const uint8_t* font, const String& text,
               int x, int y, int w, int h, Align align, uint16_t fg, uint16_t bg);
 
+    // Zamiennik tft.drawString / drawCentreString / drawRightString z gładką czcionką Inter.
+    // size jak we wbudowanych czcionkach: 1 = podpisy (11 px), 2 = tekst (15 px), 4 = duże napisy (24 px).
+    // Kolory i szerokość tła bierze z bieżących ustawień tft (setTextColor z tłem! / setTextPadding).
+    void str(TFT_eSPI& tft, const String& text, int x, int y, uint8_t size, Align align = LEFT);
+    int  height(TFT_eSPI& tft, uint8_t size); // Wysokość wiersza czcionki o danym rozmiarze [px]
+
     // Pole z pamięcią ostatniej wartości - rysuje się ponownie tylko, gdy zmieni się tekst lub kolory
     struct Field {
         String   text;

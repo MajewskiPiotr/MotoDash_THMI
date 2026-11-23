@@ -1,5 +1,6 @@
 #include "TripsScreen.h"
 #include "Theme.h"
+#include "SmoothText.h"
 #include "Icons.h" // Wspólna paleta kolorów
 #include "Config.h"
 #include <SD_MMC.h> // Wbudowana biblioteka ESP32 do kart microSD w trybie SD_MMC (tak podłączony jest slot T-HMI)
@@ -82,26 +83,26 @@ void TripsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
 
     // Tytuł ekranu + status karty SD w prawym górnym rogu (przed kropkami stron)
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    tft.drawString("OSTATNIE TRASY", 10, 6, 1);
+    SmoothText::str(tft, "OSTATNIE TRASY", 10, 6, 1);
 
     tft.setTextColor(sdAvailable ? ACCENT_GREEN : ACCENT_YELLOW, BG_COLOR);
-    tft.drawString(sdAvailable ? "[SD OK]" : "[BRAK SD]", 125, 6, 1);
+    SmoothText::str(tft, sdAvailable ? "[SD OK]" : "[BRAK SD]", 125, 6, 1);
 
     // --- NAGŁÓWEK KOLUMN TABELI (Y: 22..44) ---
     tft.fillRoundRect(8, 22, 304, 22, 8, HEADER_BG);
     tft.setTextColor(TFT_WHITE, HEADER_BG);
-    tft.drawString("#",       14, 29, 1); // Numer trasy
-    tft.drawString("CZAS",    42, 29, 1); // Czas jazdy [hh:mm]
-    tft.drawString("DYSTANS", 102, 29, 1);// Przejechane kilometry [km]
-    tft.drawString("SPAL.",   178, 29, 1);// Średnie spalanie [L/100]
-    tft.drawString("SR.V",    246, 29, 1);// Średnia prędkość [km/h]
+    SmoothText::str(tft, "#",       14, 29, 1); // Numer trasy
+    SmoothText::str(tft, "CZAS",    42, 29, 1); // Czas jazdy [hh:mm]
+    SmoothText::str(tft, "DYSTANS", 102, 29, 1);// Przejechane kilometry [km]
+    SmoothText::str(tft, "SPAL.",   178, 29, 1);// Średnie spalanie [L/100]
+    SmoothText::str(tft, "ŚR.V",    246, 29, 1);// Średnia prędkość [km/h]
 
     // Obramowanie całej tabeli (Y: 22..206)
 
     // Dolna legenda przycisków
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    tft.drawString("[MODE 2s]: Zapisz trase", 10, 218, 1);
-    tft.drawString("[ACT 2s]: Wyczysc", 195, 218, 1);
+    SmoothText::str(tft, "[MODE 2s]: Zapisz trasę", 10, 218, 1);
+    SmoothText::str(tft, "[ACT 2s]: Wyczyść", 195, 218, 1);
 }
 
 // Rysuje 5 wierszy tabeli z danymi ostatnich tras (tylko gdy zaszła zmiana - zero migotania)
@@ -114,7 +115,7 @@ void TripsScreen::update(TFT_eSPI& tft, const MotoState& state) {
 
     if (state.historyCount == 0) {
         tft.setTextColor(TEXT_MUTED, BG_COLOR);
-        tft.drawCentreString("Brak zapisanych tras", 160, 115, 2);
+        SmoothText::str(tft, "Brak zapisanych tras", 160, 115, 2, SmoothText::CENTER);
         return;
     }
 
@@ -130,23 +131,23 @@ void TripsScreen::update(TFT_eSPI& tft, const MotoState& state) {
 
         // 1. Numer trasy (#)
         tft.setTextColor(ACCENT_BLUE, rowBg);
-        tft.drawString(String(tr.id), 15, y + 7, 2);
+        SmoothText::str(tft, String(tr.id), 15, y + 7, 2);
 
         // 2. Czas jazdy (hh:mm)
         tft.setTextColor(TFT_WHITE, rowBg);
-        tft.drawString(formatDuration(tr.durationMin), 40, y + 7, 2);
+        SmoothText::str(tft, formatDuration(tr.durationMin), 40, y + 7, 2);
 
         // 3. Dystans (km)
         tft.setTextColor(ACCENT_GREEN, rowBg);
-        tft.drawString(String(tr.distanceKm, 1) + "k", 102, y + 7, 2);
+        SmoothText::str(tft, String(tr.distanceKm, 1) + "k", 102, y + 7, 2);
 
         // 4. Średnie spalanie (L/100km)
         tft.setTextColor(ACCENT_YELLOW, rowBg);
-        tft.drawString(String(tr.avgFuel100, 1) + "L", 178, y + 7, 2);
+        SmoothText::str(tft, String(tr.avgFuel100, 1) + "L", 178, y + 7, 2);
 
         // 5. Średnia prędkość (km/h)
         tft.setTextColor(TFT_WHITE, rowBg);
-        tft.drawString(String(tr.avgSpeedKmh) + "km/h", 242, y + 7, 2);
+        SmoothText::str(tft, String(tr.avgSpeedKmh) + "km/h", 242, y + 7, 2);
     }
 }
 

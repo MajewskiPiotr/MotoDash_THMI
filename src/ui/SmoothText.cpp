@@ -1,4 +1,5 @@
 #include "SmoothText.h"
+#include "Fonts.h"
 
 namespace SmoothText {
 
@@ -25,6 +26,41 @@ void draw(TFT_eSPI& tft, const uint8_t* font, const String& text,
     spr.unloadFont();
     spr.pushSprite(x, y);
     spr.deleteSprite();
+}
+
+static const uint8_t* fontFor(uint8_t size) {
+    return size <= 1 ? FontLabel : (size == 2 ? FontText : FontTitle);
+}
+
+int height(TFT_eSPI& tft, uint8_t size) {
+    tft.loadFont(fontFor(size));
+    int h = tft.fontHeight();
+    tft.unloadFont();
+    return h;
+}
+
+void str(TFT_eSPI& tft, const String& text, int x, int y, uint8_t size, Align align) {
+    const uint8_t* font = fontFor(size);
+    uint16_t fg  = tft.textcolor, bg = tft.textbgcolor;
+    uint16_t pad = tft.getTextPadding();
+
+    if (pad > 0) {
+        // Z tłem do wymazania starej wartości: całe pole przez sprite (bez migania)
+        tft.loadFont(font);
+        int tw = tft.textWidth(text), fh = tft.fontHeight();
+        tft.unloadFont();
+        int w  = max((int)pad, tw);
+        int bx = align == LEFT ? x : (align == CENTER ? x - w / 2 : x - w);
+        draw(tft, font, text, bx, y, w, fh, align, fg, bg);
+        return;
+    }
+    // Bez tła: prosto na ekran (napisy statyczne). Kolor tła musi być podany - wyświetlacz nie umie odczytać pikseli.
+    tft.loadFont(font);
+    tft.setTextColor(fg, bg);
+    tft.setTextDatum(align == LEFT ? TL_DATUM : (align == CENTER ? TC_DATUM : TR_DATUM));
+    tft.drawString(text, x, y);
+    tft.setTextDatum(TL_DATUM);
+    tft.unloadFont();
 }
 
 void Field::show(TFT_eSPI& tft, const uint8_t* font, const String& t,

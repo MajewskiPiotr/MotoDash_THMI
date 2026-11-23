@@ -1,5 +1,6 @@
 #include "RefuelScreen.h"
-#include "Theme.h" // Wspólna paleta kolorów
+#include "Theme.h"
+#include "SmoothText.h" // Wspólna paleta kolorów
 #include "Config.h"
 
 
@@ -115,7 +116,7 @@ void RefuelScreen::activateCalib(MotoState& state, uint8_t item) {
     }
 }
 
-// "DO PELNA": jeśli są dane do kalibracji, pytamy o litry z dystrybutora; inaczej od razu pełny bak
+// "DO PEŁNA": jeśli są dane do kalibracji, pytamy o litry z dystrybutora; inaczej od razu pełny bak
 void RefuelScreen::startFullRefuel(MotoState& state) {
     if (!fuelCalculator) { close(state); return; }
 
@@ -212,16 +213,16 @@ void RefuelScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.fillRoundRect(FUEL_X, FUEL_Y, FUEL_W, FUEL_H, CARD_RADIUS, CARD_COLOR);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
     if (view == VIEW_MAIN) {
-        tft.drawString("STAN PALIWA W BAKU", 16, 30, 1);
-        tft.drawRightString("ZASIEG", 304, 30, 1);
+        SmoothText::str(tft, "STAN PALIWA W BAKU", 16, 30, 1);
+        SmoothText::str(tft, "ZASIĘG", 304, 30, 1, SmoothText::RIGHT);
     } else {
-        tft.drawString("WPISZ LITRY Z DYSTRYBUTORA", 16, 30, 1);
+        SmoothText::str(tft, "WPISZ LITRY Z DYSTRYBUTORA", 16, 30, 1);
     }
 
     // Karta wyboru ilości (środek między przyciskami - i +)
     tft.fillRoundRect(MINUS_X + PM_W + 6, AMT_Y, PLUS_X - MINUS_X - PM_W - 12, AMT_H, CARD_RADIUS, CARD_COLOR);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-    tft.drawCentreString(view == VIEW_MAIN ? "ILOSC DO DOLANIA" : "WLANO DO PELNA", 160, AMT_Y + 6, 1);
+    SmoothText::str(tft, view == VIEW_MAIN ? "ILOŚĆ DO DOLANIA" : "WLANO DO PEŁNA", 160, AMT_Y + 6, 1, SmoothText::CENTER);
 }
 
 void RefuelScreen::update(TFT_eSPI& tft, const MotoState& state) {
@@ -230,7 +231,7 @@ void RefuelScreen::update(TFT_eSPI& tft, const MotoState& state) {
     if (millis() - lastActivityMs >= timeout) {
         if (!statePtr) return;
         if (view == VIEW_CALIB) {
-            // Użytkownik wybrał już "DO PELNA" - tankujemy do pełna, tylko bez kalibracji
+            // Użytkownik wybrał już "DO PEŁNA" - tankujemy do pełna, tylko bez kalibracji
             Serial.println("[Refuel] Brak reakcji w kalibracji - do pelna bez kalibracji");
             closeTank(*statePtr, 0.0f, false);
         } else {
@@ -272,10 +273,10 @@ void RefuelScreen::update(TFT_eSPI& tft, const MotoState& state) {
 
 void RefuelScreen::drawHeader(TFT_eSPI& tft, const char* title) {
     tft.setTextColor(ACCENT_BLUE, BG_COLOR);
-    tft.drawString(title, 10, 6, 1);
+    SmoothText::str(tft, title, 10, 6, 1);
     if (view != VIEW_RESULT) {
         tft.setTextColor(TEXT_MUTED, BG_COLOR);
-        tft.drawRightString("[MODE]: Wybor  [ACT]: OK", 310, 6, 1);
+        SmoothText::str(tft, "[MODE]: wybór  [ACT]: OK", 310, 6, 1, SmoothText::RIGHT);
     }
 }
 
@@ -288,7 +289,7 @@ void RefuelScreen::drawCountdown(TFT_eSPI& tft, unsigned long timeoutMs) {
     int x = (view == VIEW_CALIB) ? 128 : 80;
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
     tft.setTextPadding(36);
-    tft.drawString(String(secLeft) + " s", x, 6, 1);
+    SmoothText::str(tft, String(secLeft) + " s", x, 6, 1);
     tft.setTextPadding(0);
 }
 
@@ -305,18 +306,18 @@ void RefuelScreen::drawFuelCard(TFT_eSPI& tft, const MotoState& state) {
     // Duża liczba litrów + pojemność baku
     tft.setTextColor(levelColor, CARD_COLOR);
     tft.setTextPadding(110);
-    tft.drawString(String(state.fuelInTankL, 1) + " L", 16, 44, 4);
+    SmoothText::str(tft, String(state.fuelInTankL, 1) + " L", 16, 44, 4);
     tft.setTextPadding(0);
 
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
     tft.setTextPadding(80);
-    tft.drawString("/ " + String(state.tankCapacityL, 1) + " L  (" + String((int)(ratio * 100)) + "%)", 128, 52, 2);
+    SmoothText::str(tft, "/ " + String(state.tankCapacityL, 1) + " L  (" + String((int)(ratio * 100)) + "%)", 128, 52, 2);
     tft.setTextPadding(0);
 
     // Zasięg po prawej
     tft.setTextColor(ACCENT_BLUE, CARD_COLOR);
     tft.setTextPadding(60);
-    tft.drawRightString("~" + String(state.rangeKm) + " km", 304, 52, 2);
+    SmoothText::str(tft, "~" + String(state.rangeKm) + " km", 304, 52, 2, SmoothText::RIGHT);
     tft.setTextPadding(0);
 
     // Pasek poziomu paliwa: obecny stan + podgląd stanu po dolaniu wybranej ilości
@@ -341,19 +342,19 @@ void RefuelScreen::drawControls(TFT_eSPI& tft, const MotoState& state) {
     tft.setTextPadding(150);
     if (tankFull) {
         tft.setTextColor(ACCENT_RED, CARD_COLOR);
-        tft.drawCentreString("BAK PELNY", 160, AMT_Y + 18, 4);
+        SmoothText::str(tft, "BAK PEŁNY", 160, AMT_Y + 18, 4, SmoothText::CENTER);
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString("nie mozna dolac paliwa", 160, AMT_Y + 46, 1);
+        SmoothText::str(tft, "nie można dolać paliwa", 160, AMT_Y + 46, 1, SmoothText::CENTER);
     } else {
         tft.setTextColor(TFT_WHITE, CARD_COLOR);
-        tft.drawCentreString("+" + String(amountL, 1) + " L", 160, AMT_Y + 18, 4);
+        SmoothText::str(tft, "+" + String(amountL, 1) + " L", 160, AMT_Y + 18, 4, SmoothText::CENTER);
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString("po: " + String(afterL, 1) + " L", 160, AMT_Y + 46, 1);
+        SmoothText::str(tft, "po: " + String(afterL, 1) + " L", 160, AMT_Y + 46, 1, SmoothText::CENTER);
     }
     tft.setTextPadding(0);
 
     // Dolny rząd: DO PELNA / DOLEJ / ANULUJ
-    drawButton(tft, FULL_X,   BTN_Y, BTN_W, BTN_H, "DO PELNA", ACCENT_GREEN, selected == ITEM_FULL, 2);
+    drawButton(tft, FULL_X,   BTN_Y, BTN_W, BTN_H, "DO PEŁNA", ACCENT_GREEN, selected == ITEM_FULL, 2);
     drawButton(tft, ADD_X,    BTN_Y, BTN_W, BTN_H, "DOLEJ",    tankFull ? BORDER_COLOR : ACCENT_BLUE,
                selected == ITEM_ADD, 2);
     drawButton(tft, CANCEL_X, BTN_Y, BTN_W, BTN_H, "ANULUJ",   TEXT_MUTED, selected == ITEM_CANCEL, 2);
@@ -363,9 +364,9 @@ void RefuelScreen::drawCalibInfo(TFT_eSPI& tft, const MotoState& state) {
     float expected = fuelCalculator ? fuelCalculator->expectedRefillL() : 0.0f;
     tft.setTextPadding(280);
     tft.setTextColor(TFT_WHITE, CARD_COLOR);
-    tft.drawString("Komputer wyliczyl: " + String(expected, 1) + " L", 16, 46, 2);
+    SmoothText::str(tft, "Komputer wyliczył: " + String(expected, 1) + " L", 16, 46, 2);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-    tft.drawString("Obecny mnoznik spalania: " + String(state.fuelCalFactor, 2), 16, 68, 2);
+    SmoothText::str(tft, "Obecny mnożnik spalania: " + String(state.fuelCalFactor, 2), 16, 68, 2);
     tft.setTextPadding(0);
 }
 
@@ -377,20 +378,20 @@ void RefuelScreen::drawCalibControls(TFT_eSPI& tft, const MotoState& state) {
     float expected = fuelCalculator ? fuelCalculator->expectedRefillL() : 0.0f;
     tft.setTextPadding(150);
     tft.setTextColor(TFT_WHITE, CARD_COLOR);
-    tft.drawCentreString(String(pumpedL, 1) + " L", 160, AMT_Y + 18, 4);
+    SmoothText::str(tft, String(pumpedL, 1) + " L", 160, AMT_Y + 18, 4, SmoothText::CENTER);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
     if (expected > 0.1f) {
         float diffPct = (pumpedL - expected) / expected * 100.0f;
-        tft.drawCentreString("roznica: " + String(diffPct > 0 ? "+" : "") + String(diffPct, 1) + "%",
-                             160, AMT_Y + 46, 1);
+        SmoothText::str(tft, "różnica: " + String(diffPct > 0 ? "+" : "") + String(diffPct, 1) + "%",
+                             160, AMT_Y + 46, 1, SmoothText::CENTER);
     } else {
-        tft.drawCentreString(" ", 160, AMT_Y + 46, 1);
+        SmoothText::str(tft, " ", 160, AMT_Y + 46, 1, SmoothText::CENTER);
     }
     tft.setTextPadding(0);
 
     // Dolny rząd: ZAPISZ / POMIN / WSTECZ
     drawButton(tft, FULL_X,   BTN_Y, BTN_W, BTN_H, "ZAPISZ", ACCENT_GREEN, selected == ITEM_FULL,   2);
-    drawButton(tft, ADD_X,    BTN_Y, BTN_W, BTN_H, "POMIN",  ACCENT_BLUE,  selected == ITEM_ADD,    2);
+    drawButton(tft, ADD_X,    BTN_Y, BTN_W, BTN_H, "POMIŃ",  ACCENT_BLUE,  selected == ITEM_ADD,    2);
     drawButton(tft, CANCEL_X, BTN_Y, BTN_W, BTN_H, "WSTECZ", TEXT_MUTED,   selected == ITEM_CANCEL, 2);
 }
 
@@ -400,25 +401,25 @@ void RefuelScreen::drawResult(TFT_eSPI& tft, const MotoState& state) {
     tft.fillRoundRect(8, 40, 304, 150, CARD_RADIUS, CARD_COLOR);
 
     tft.setTextColor(ACCENT_GREEN, CARD_COLOR);
-    tft.drawCentreString("ZATANKOWANO DO PELNA", 160, 52, 2);
+    SmoothText::str(tft, "ZATANKOWANO DO PEŁNA", 160, 52, 2, SmoothText::CENTER);
 
     if (r.status == TANK_OK) {
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString(changed ? "Mnoznik spalania" : "Mnoznik spalania bez zmian", 160, 84, 2);
+        SmoothText::str(tft, changed ? "Mnożnik spalania" : "Mnożnik spalania bez zmian", 160, 84, 2, SmoothText::CENTER);
         tft.setTextColor(TFT_WHITE, CARD_COLOR);
-        tft.drawCentreString(changed ? String(r.oldF, 2) + "  ->  " + String(r.newF, 2) : String(r.newF, 2), 160, 108, 4);
+        SmoothText::str(tft, changed ? String(r.oldF, 2) + "  ->  " + String(r.newF, 2) : String(r.newF, 2), 160, 108, 4, SmoothText::CENTER);
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString("Szczegoly: strona Wi-Fi, Tankowania", 160, 150, 2);
+        SmoothText::str(tft, "Szczegóły: strona Wi-Fi, Tankowania", 160, 150, 2, SmoothText::CENTER);
     } else {
         tft.setTextColor(ACCENT_YELLOW, CARD_COLOR);
-        tft.drawCentreString("Bak pominiety w kalibracji", 160, 90, 2);
+        SmoothText::str(tft, "Bak pominięty w kalibracji", 160, 90, 2, SmoothText::CENTER);
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        tft.drawCentreString("Roznica " + String(r.diffPct, 0) + "% - wiecej niz 30%.", 160, 118, 2);
-        tft.drawCentreString("Sprawdz litry lub czy bak byl pelny.", 160, 140, 2);
+        SmoothText::str(tft, "Różnica " + String(r.diffPct, 0) + "% - więcej niż 30%.", 160, 118, 2, SmoothText::CENTER);
+        SmoothText::str(tft, "Sprawdź litry lub czy bak był pełny.", 160, 140, 2, SmoothText::CENTER);
     }
 
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    tft.drawCentreString("Dowolny przycisk: OK", 160, 210, 2);
+    SmoothText::str(tft, "Dowolny przycisk: OK", 160, 210, 2, SmoothText::CENTER);
 }
 
 void RefuelScreen::drawButton(TFT_eSPI& tft, int x, int y, int w, int h, const String& label,
@@ -428,7 +429,8 @@ void RefuelScreen::drawButton(TFT_eSPI& tft, int x, int y, int w, int h, const S
     tft.drawRoundRect(x, y, w, h, 7, isSelected ? TFT_WHITE : accent);
     if (isSelected) tft.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 6, TFT_WHITE); // Grubsza ramka zaznaczenia
 
-    int fontH = (font == 4) ? 26 : 16;
+    int fontH = SmoothText::height(tft, font);
     tft.setTextColor(isSelected ? TFT_WHITE : accent, bg);
-    tft.drawCentreString(label, x + w / 2, y + (h - fontH) / 2, font);
+    tft.setTextPadding(0);
+    SmoothText::str(tft, label, x + w / 2, y + (h - fontH) / 2, font, SmoothText::CENTER);
 }

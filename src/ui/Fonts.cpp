@@ -5,3 +5,5 @@
 #include "fonts/FontNumL.h"
 #include "fonts/FontNumM.h"
 #include "fonts/FontLabel.h"
+#include "fonts/FontText.h"
+#include "fonts/FontTitle.h"

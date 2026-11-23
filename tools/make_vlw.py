@@ -38,7 +38,9 @@ def to_header(name, data, comment):
     return "\n".join(lines)
 
 NUM = "0123456789.-° "
-TXT = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-/:%°()"
+TXT = (" ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789"
+       ".,:;-+/%°()[]<>!?\"'#_~=&*"
+       "ąćęłńóśźżĄĆĘŁŃÓŚŹŻ")
 # Katalog z plikami czcionki Inter (https://rsms.me/inter/ lub Google Fonts, licencja OFL).
 # Można podać inny: MOTODASH_FONTS=/sciezka python3 tools/make_vlw.py
 INTER = os.environ.get("MOTODASH_FONTS", "/usr/share/fonts/opentype/inter").rstrip("/") + "/"
@@ -47,6 +49,8 @@ FONTS = [  # nazwa, plik, rozmiar, znaki, opis
     ("FontNumL",  INTER + "InterDisplay-Bold.otf",     29, NUM, "Inter Display Bold 29 px - srednie liczby (napiecie, paliwo, zasieg)"),
     ("FontNumM",  INTER + "InterDisplay-SemiBold.otf", 19, NUM, "Inter Display SemiBold 19 px - male liczby (opony, srednie spalanie)"),
     ("FontLabel", INTER + "Inter-SemiBold.otf",        11, TXT, "Inter SemiBold 11 px - podpisy"),
+    ("FontText",  INTER + "Inter-SemiBold.otf",        15, TXT, "Inter SemiBold 15 px - zwykly tekst (menu, tabele, opisy)"),
+    ("FontTitle", INTER + "InterDisplay-Bold.otf",     24, TXT, "Inter Display Bold 24 px - duze napisy i wartosci z jednostkami"),
 ]
 if __name__ == "__main__":
     outdir = sys.argv[1] if len(sys.argv) > 1 else "src/ui/fonts"
