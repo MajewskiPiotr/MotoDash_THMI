@@ -50,9 +50,9 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
 
     card(tft, 162, 112, 150, 78);
     Icons::fuelPump(tft, 170, 120, ACCENT_YELLOW, CARD);
-    label(tft, "PALIWO", 192, 123, 46);
-    Icons::road(tft, 240, 120, ACCENT_BLUE, CARD);
-    label(tft, "ZASIEG", 262, 123, 46, RIGHT);
+    label(tft, "PALIWO", 192, 123, 48);
+    Icons::road(tft, 242, 120, ACCENT_BLUE, CARD);
+    label(tft, "ZASIEG", 264, 123, 44, RIGHT);
 }
 
 // Odświeża wartości (co ~150 ms) - każde pole rysuje się tylko po zmianie
