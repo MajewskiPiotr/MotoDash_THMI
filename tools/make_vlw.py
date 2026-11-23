@@ -43,10 +43,10 @@ TXT = " ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789.-/:%°()"
 # Można podać inny: MOTODASH_FONTS=/sciezka python3 tools/make_vlw.py
 INTER = os.environ.get("MOTODASH_FONTS", "/usr/share/fonts/opentype/inter").rstrip("/") + "/"
 FONTS = [  # nazwa, plik, rozmiar, znaki, opis
-    ("FontNumXL", INTER + "InterDisplay-Bold.otf",     58, NUM, "Inter Display Bold 58 px - duze liczby (temperatura, spalanie)"),
-    ("FontNumL",  INTER + "InterDisplay-Bold.otf",     30, NUM, "Inter Display Bold 30 px - srednie liczby (napiecie, paliwo, zasieg)"),
-    ("FontNumM",  INTER + "InterDisplay-SemiBold.otf", 20, NUM, "Inter Display SemiBold 20 px - male liczby (opony, srednie spalanie)"),
-    ("FontLabel", INTER + "Inter-SemiBold.otf",        12, TXT, "Inter SemiBold 12 px - podpisy"),
+    ("FontNumXL", INTER + "InterDisplay-Bold.otf",     57, NUM, "Inter Display Bold 57 px - duze liczby (temperatura, spalanie)"),
+    ("FontNumL",  INTER + "InterDisplay-Bold.otf",     29, NUM, "Inter Display Bold 29 px - srednie liczby (napiecie, paliwo, zasieg)"),
+    ("FontNumM",  INTER + "InterDisplay-SemiBold.otf", 19, NUM, "Inter Display SemiBold 19 px - male liczby (opony, srednie spalanie)"),
+    ("FontLabel", INTER + "Inter-SemiBold.otf",        11, TXT, "Inter SemiBold 11 px - podpisy"),
 ]
 if __name__ == "__main__":
     outdir = sys.argv[1] if len(sys.argv) > 1 else "src/ui/fonts"
