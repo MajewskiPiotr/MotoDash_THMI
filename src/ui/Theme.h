@@ -22,3 +22,9 @@ constexpr uint16_t ACCENT_YELLOW = 0xFFE0; // Żółty (niski poziom paliwa, ost
 constexpr uint16_t ACCENT_RED    = 0xF800; // Czerwony (alarmy)
 constexpr uint16_t BAR_PREVIEW   = 0x0320; // Ciemnozielony (podgląd stanu baku po dolaniu)
 constexpr uint16_t DOT_INACTIVE  = 0x4A69; // Szary (nieaktywna kropka wskaźnika stron)
+
+// --- STYL "NOWOCZESNY" (ekrany z ikonami) ---
+constexpr uint16_t MODERN_BG     = 0x0000; // Czarne tło
+constexpr uint16_t MODERN_CARD   = 0x18C3; // Karta bez ramki
+constexpr uint16_t TRACK_DIM     = 0x3186; // Pusta część pasków i segmentów
+constexpr uint16_t ACCENT_ORANGE = 0xFC60; // Pomarańczowy (ikona temperatury silnika)

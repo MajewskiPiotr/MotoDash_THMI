@@ -3,7 +3,7 @@
 #include "FuelCalculator.h"
 #include "RefuelScreen.h"
 
-// Ekran 1: Główny tryb jazdy (bieg, temperatura, napięcie, spalanie, zasięg, TPMS).
+// Ekran 1: Główny tryb jazdy w stylu z ikonami (temperatura, spalanie, akumulator, otoczenie, paliwo, opony).
 class RidingScreen : public Screen {
 public:
     // Konstruktor przyjmujący wskaźnik na kalkulator paliwa (Dependency Injection)
@@ -18,4 +18,12 @@ public:
 private:
     FuelCalculator* fuelCalculator;
     RefuelScreen*   refuelScreen;
+
+    // Zapamiętany stan elementów graficznych - rysujemy je ponownie tylko po zmianie (bez migania)
+    int  lastTempBarW  = -1;
+    int  lastFuelSegs  = -1;
+    uint16_t lastFuelCol = 0;
+    int8_t lastTireState[2] = {-1, -1}; // 0 = brak odczytu, 1 = OK, 2 = alarm
+
+    void drawTire(TFT_eSPI& tft, int idx, bool ok, float bar, int tempC, float minBar);
 };
