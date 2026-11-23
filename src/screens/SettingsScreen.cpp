@@ -1,5 +1,6 @@
 #include "SettingsScreen.h"
-#include "Theme.h" // Wspólna paleta kolorów
+#include "Theme.h"
+#include "Icons.h" // Wspólna paleta kolorów
 #include <Preferences.h> // Wbudowana biblioteka ESP32 do obsługi nieulotnej pamięci Flash (NVS)
 
 
@@ -38,9 +39,8 @@ void SettingsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     isDirty = true; // Wymusza narysowanie wszystkich wierszy przy pierwszym wywołaniu update()
     tft.fillScreen(BG_COLOR);
 
-    tft.setTextColor(ACCENT_BLUE, BG_COLOR);
-    tft.drawString("KONFIGURACJA SYSTEMU", 10, 6, 1);
-    tft.drawRoundRect(8, 22, 304, 188, 7, BORDER_COLOR);
+    tft.setTextColor(TEXT_MUTED, BG_COLOR);
+    tft.drawString("USTAWIENIA", 10, 6, 1);
 
     // Dolna legenda podpowiadająca działanie przycisków w menu
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
@@ -80,12 +80,21 @@ void SettingsScreen::update(TFT_eSPI& tft, const MotoState& state) {
 
         // Podświetla aktywny wiersz kolorem HIGHLIGHT_BG
         uint16_t rowBg = isSelected ? HIGHLIGHT_BG : CARD_COLOR;
-        tft.fillRoundRect(12, y, 296, 25, 4, rowBg);
+        tft.fillRoundRect(8, y, 304, 25, 8, rowBg);
 
-        // Rysuje nazwę parametru po lewej stronie ze strzałką '>' dla wybranej pozycji
+        // Ikona pozycji
+        uint16_t ic = isSelected ? TFT_WHITE : TEXT_MUTED;
+        switch (i) {
+            case 0: Icons::droplet(tft, 14, y + 2, isSelected ? TFT_WHITE : ACCENT_BLUE); break;
+            case 1: Icons::fuelPump(tft, 14, y + 3, isSelected ? TFT_WHITE : ACCENT_YELLOW, rowBg); break;
+            case 2: case 3: Icons::tire(tft, 14, y + 2, ic, rowBg); break;
+            case 4: Icons::mountain(tft, 14, y + 2, ic, rowBg); break;
+            case 5: Icons::check(tft, 14, y + 2, ACCENT_GREEN); break;
+        }
+
+        // Nazwa parametru (zaznaczona pozycja: jasny tekst na niebieskim tle)
         tft.setTextColor(isSelected ? TFT_WHITE : TEXT_MUTED, rowBg);
-        String prefix = isSelected ? "> " : "  ";
-        tft.drawString(prefix + String(labels[i]), 18, y + 5, 2);
+        tft.drawString(labels[i], 42, y + 5, 2);
 
         // Rysuje wartość parametru wyrównaną do prawej krawędzi
         tft.setTextColor(isSelected ? ACCENT_GREEN : TFT_WHITE, rowBg);

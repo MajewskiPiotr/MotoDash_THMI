@@ -63,4 +63,42 @@ void degree(TFT_eSPI& t, int x, int y, uint16_t c) {
     t.drawCircle(x, y, 2, c);
 }
 
+void speedometer(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg) {
+    const int cx = x + 10, cy = y + 13;
+    t.fillCircle(cx, cy, 9, c);
+    t.fillCircle(cx, cy, 6, bg);
+    t.fillRect(x, cy + 3, 20, 8, bg);            // Ucięcie dołu tarczy
+    t.drawLine(cx, cy, cx + 5, cy - 5, c);       // Wskazówka
+    t.drawLine(cx + 1, cy, cx + 6, cy - 5, c);
+    t.fillCircle(cx, cy, 2, c);
+}
+
+void warning(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg) {
+    t.fillTriangle(x + 10, y + 1, x + 1, y + 18, x + 19, y + 18, c);
+    t.fillRect(x + 9, y + 7, 2, 6, bg);          // "!"
+    t.fillRect(x + 9, y + 14, 2, 2, bg);
+}
+
+void mountain(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg) {
+    t.fillTriangle(x + 1, y + 18, x + 8, y + 4, x + 15, y + 18, c);
+    t.fillTriangle(x + 8, y + 18, x + 14, y + 9, x + 19, y + 18, c);
+    t.fillTriangle(x + 8, y + 4, x + 6, y + 8, x + 10, y + 8, bg);   // Śnieg na szczycie
+    t.drawLine(x + 6, y + 8, x + 10, y + 8, c);
+}
+
+void check(TFT_eSPI& t, int x, int y, uint16_t c) {
+    for (int k = 0; k < 2; k++) {
+        t.drawLine(x + 3, y + 10 + k, x + 8, y + 15 + k, c);
+        t.drawLine(x + 8, y + 15 + k, x + 17, y + 4 + k, c);
+    }
+}
+
+void wifi(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg) {
+    const int cx = x + 16, cy = y + 19;
+    // Kąty w TFT_eSPI: 0 = godzina 6, rosną zgodnie z ruchem wskazówek - 135..225 to wycinek "do góry"
+    t.drawArc(cx, cy, 18, 15, 135, 225, c, bg, true);
+    t.drawArc(cx, cy, 12, 9, 135, 225, c, bg, true);
+    t.fillCircle(cx, cy - 1, 3, c);
+}
+
 } // namespace Icons

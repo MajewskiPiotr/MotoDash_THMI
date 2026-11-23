@@ -1,5 +1,6 @@
 #include "TripsScreen.h"
-#include "Theme.h" // Wspólna paleta kolorów
+#include "Theme.h"
+#include "Icons.h" // Wspólna paleta kolorów
 #include "Config.h"
 #include <SD_MMC.h> // Wbudowana biblioteka ESP32 do kart microSD w trybie SD_MMC (tak podłączony jest slot T-HMI)
 
@@ -80,14 +81,14 @@ void TripsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.fillScreen(BG_COLOR);
 
     // Tytuł ekranu + status karty SD w prawym górnym rogu (przed kropkami stron)
-    tft.setTextColor(ACCENT_BLUE, BG_COLOR);
-    tft.drawString("OSTATNIE 5 TRAS", 10, 6, 1);
+    tft.setTextColor(TEXT_MUTED, BG_COLOR);
+    tft.drawString("OSTATNIE TRASY", 10, 6, 1);
 
     tft.setTextColor(sdAvailable ? ACCENT_GREEN : ACCENT_YELLOW, BG_COLOR);
     tft.drawString(sdAvailable ? "[SD OK]" : "[BRAK SD]", 125, 6, 1);
 
     // --- NAGŁÓWEK KOLUMN TABELI (Y: 22..44) ---
-    tft.fillRoundRect(8, 22, 304, 22, 4, HEADER_BG);
+    tft.fillRoundRect(8, 22, 304, 22, 8, HEADER_BG);
     tft.setTextColor(TFT_WHITE, HEADER_BG);
     tft.drawString("#",       14, 29, 1); // Numer trasy
     tft.drawString("CZAS",    42, 29, 1); // Czas jazdy [hh:mm]
@@ -96,7 +97,6 @@ void TripsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.drawString("SR.V",    246, 29, 1);// Średnia prędkość [km/h]
 
     // Obramowanie całej tabeli (Y: 22..206)
-    tft.drawRoundRect(8, 22, 304, 184, 6, BORDER_COLOR);
 
     // Dolna legenda przycisków
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
@@ -110,7 +110,7 @@ void TripsScreen::update(TFT_eSPI& tft, const MotoState& state) {
     isDirty = false;
 
     // Czyścimy obszar wierszy wewnątrz ramki tabeli
-    tft.fillRect(10, 46, 300, 158, BG_COLOR);
+    tft.fillRect(8, 46, 304, 160, BG_COLOR); // Czyści cały obszar wierszy (także zaokrąglone brzegi)
 
     if (state.historyCount == 0) {
         tft.setTextColor(TEXT_MUTED, BG_COLOR);
@@ -124,7 +124,7 @@ void TripsScreen::update(TFT_eSPI& tft, const MotoState& state) {
         uint16_t rowBg = (i % 2 == 0) ? CARD_COLOR : ROW_ALT_COLOR;
 
         // Tło pojedynczego wiersza
-        tft.fillRoundRect(11, y, 298, 28, 3, rowBg);
+        tft.fillRoundRect(8, y, 304, 28, 8, rowBg);
 
         const TripRecord& tr = state.history[i];
 

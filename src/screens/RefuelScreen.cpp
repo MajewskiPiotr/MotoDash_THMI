@@ -209,8 +209,7 @@ void RefuelScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     drawHeader(tft, view == VIEW_CALIB ? "KALIBRACJA SPALANIA" : "TANKOWANIE");
 
     // Górna karta
-    tft.fillRoundRect(FUEL_X, FUEL_Y, FUEL_W, FUEL_H, 7, CARD_COLOR);
-    tft.drawRoundRect(FUEL_X, FUEL_Y, FUEL_W, FUEL_H, 7, BORDER_COLOR);
+    tft.fillRoundRect(FUEL_X, FUEL_Y, FUEL_W, FUEL_H, CARD_RADIUS, CARD_COLOR);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
     if (view == VIEW_MAIN) {
         tft.drawString("STAN PALIWA W BAKU", 16, 30, 1);
@@ -220,8 +219,7 @@ void RefuelScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     }
 
     // Karta wyboru ilości (środek między przyciskami - i +)
-    tft.fillRoundRect(MINUS_X + PM_W + 6, AMT_Y, PLUS_X - MINUS_X - PM_W - 12, AMT_H, 7, CARD_COLOR);
-    tft.drawRoundRect(MINUS_X + PM_W + 6, AMT_Y, PLUS_X - MINUS_X - PM_W - 12, AMT_H, 7, BORDER_COLOR);
+    tft.fillRoundRect(MINUS_X + PM_W + 6, AMT_Y, PLUS_X - MINUS_X - PM_W - 12, AMT_H, CARD_RADIUS, CARD_COLOR);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
     tft.drawCentreString(view == VIEW_MAIN ? "ILOSC DO DOLANIA" : "WLANO DO PELNA", 160, AMT_Y + 6, 1);
 }
@@ -399,8 +397,7 @@ void RefuelScreen::drawCalibControls(TFT_eSPI& tft, const MotoState& state) {
 void RefuelScreen::drawResult(TFT_eSPI& tft, const MotoState& state) {
     const RefuelResult& r = lastResult;
     bool changed = r.status == TANK_OK && fabsf(r.newF - r.oldF) >= 0.005f;
-    tft.fillRoundRect(8, 40, 304, 150, 7, CARD_COLOR);
-    tft.drawRoundRect(8, 40, 304, 150, 7, r.status == TANK_SKIPPED ? ACCENT_YELLOW : ACCENT_GREEN);
+    tft.fillRoundRect(8, 40, 304, 150, CARD_RADIUS, CARD_COLOR);
 
     tft.setTextColor(ACCENT_GREEN, CARD_COLOR);
     tft.drawCentreString("ZATANKOWANO DO PELNA", 160, 52, 2);
@@ -427,7 +424,7 @@ void RefuelScreen::drawResult(TFT_eSPI& tft, const MotoState& state) {
 void RefuelScreen::drawButton(TFT_eSPI& tft, int x, int y, int w, int h, const String& label,
                               uint16_t accent, bool isSelected, uint8_t font) {
     uint16_t bg = isSelected ? HIGHLIGHT_BG : CARD_COLOR;
-    tft.fillRoundRect(x, y, w, h, 7, bg);
+    tft.fillRoundRect(x, y, w, h, CARD_RADIUS, bg);
     tft.drawRoundRect(x, y, w, h, 7, isSelected ? TFT_WHITE : accent);
     if (isSelected) tft.drawRoundRect(x + 1, y + 1, w - 2, h - 2, 6, TFT_WHITE); // Grubsza ramka zaznaczenia
 

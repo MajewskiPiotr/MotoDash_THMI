@@ -12,4 +12,9 @@ namespace Icons {
     void road(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg);
     void tire(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg);
     void degree(TFT_eSPI& t, int x, int y, uint16_t c); // Mały znak stopnia (środek w x, y)
+    void speedometer(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg);
+    void warning(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg);   // Trójkąt z wykrzyknikiem
+    void mountain(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg);
+    void check(TFT_eSPI& t, int x, int y, uint16_t c);                  // "Ptaszek"
+    void wifi(TFT_eSPI& t, int x, int y, uint16_t c, uint16_t bg);      // Pole 32x22 (gładkie łuki)
 }

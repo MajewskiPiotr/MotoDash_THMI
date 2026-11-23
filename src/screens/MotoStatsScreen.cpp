@@ -1,53 +1,48 @@
 #include "MotoStatsScreen.h"
-#include "Theme.h" // Wspólna paleta kolorów
+#include "Theme.h"
+#include "Icons.h"
+#include "Config.h" // Wspólna paleta kolorów
 
 
 // Rysuje statyczny układ 4 kafelków ze statystykami motocykla
 void MotoStatsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.fillScreen(BG_COLOR);
+    tft.setTextColor(TEXT_MUTED, BG_COLOR);
+    tft.drawString("STATYSTYKI", 10, 6, 1);
 
-    tft.setTextColor(ACCENT_BLUE, BG_COLOR);
-    tft.drawString("STATYSTYKI MOTOCYKLA", 10, 6, 1);
+    // 4 karty z ikonami: prędkość/obroty | temperatura | napięcie przy rozruchu | błędy ECU
+    tft.fillRoundRect(8, 22, 148, 88, CARD_RADIUS, CARD_COLOR);
+    Icons::speedometer(tft, 16, 30, ACCENT_BLUE, CARD_COLOR);
+    tft.fillRoundRect(164, 22, 148, 88, CARD_RADIUS, CARD_COLOR);
+    Icons::thermometer(tft, 172, 30, ACCENT_ORANGE, CARD_COLOR);
+    tft.fillRoundRect(8, 118, 148, 88, CARD_RADIUS, CARD_COLOR);
+    Icons::battery(tft, 16, 126, ACCENT_GREEN, CARD_COLOR);
+    tft.fillRoundRect(164, 118, 148, 88, CARD_RADIUS, CARD_COLOR);
+    Icons::warning(tft, 172, 126, ACCENT_YELLOW, CARD_COLOR);
 
-    // Kafelek 1 (Lewy górny): Prędkość Max oraz Obroty Max
-    tft.fillRoundRect(8, 22, 148, 88, 7, CARD_COLOR);
-    tft.drawRoundRect(8, 22, 148, 88, 7, BORDER_COLOR);
     tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-    tft.drawString("MAX V / MAX RPM", 16, 30, 1);
+    tft.drawString("MAX V / RPM", 40, 36, 1);
+    tft.drawString("MAX TEMP.", 196, 36, 1);
+    tft.drawString("MIN NAPIECIE", 40, 132, 1);
+    tft.drawString("BLEDY ECU", 196, 132, 1);
 
-    // Kafelek 2 (Prawy górny): Najwyższa temperatura silnika
-    tft.fillRoundRect(164, 22, 148, 88, 7, CARD_COLOR);
-    tft.drawRoundRect(164, 22, 148, 88, 7, BORDER_COLOR);
-    tft.drawString("MAX TEMP. SILNIKA", 172, 30, 1);
-
-    // Kafelek 3 (Lewy dolny): Najniższe napięcie przy rozruchu
-    tft.fillRoundRect(8, 118, 148, 88, 7, CARD_COLOR);
-    tft.drawRoundRect(8, 118, 148, 88, 7, BORDER_COLOR);
-    tft.drawString("MIN NAPIECIE (START)", 16, 126, 1);
-
-    // Kafelek 4 (Prawy dolny): Błędy ECU (DTC)
-    tft.fillRoundRect(164, 118, 148, 88, 7, CARD_COLOR);
-    tft.drawRoundRect(164, 118, 148, 88, 7, BORDER_COLOR);
-    tft.drawString("BLEDY ECU (DTC)", 172, 126, 1);
-
-    // Dolna legenda przycisków
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
     tft.drawString("[MODE 2s]: Reset Max/Min", 10, 218, 1);
     tft.drawString("[ACT 2s]: Kasuj bledy", 185, 218, 1);
 }
 
-// Aktualizuje liczby w 4 kafelkach statystyk
+// Aktualizuje liczby w 4 kartach statystyk
 void MotoStatsScreen::update(TFT_eSPI& tft, const MotoState& state) {
     tft.setTextPadding(132); // Zapobiega nakładaniu się cyfr
 
-    // 1. Prędkość maksymalna (duża) oraz Maksymalne obroty (poniżej)
+    // 1. Prędkość maksymalna (duża) oraz maksymalne obroty (poniżej)
     tft.setTextColor(ACCENT_BLUE, CARD_COLOR);
-    tft.drawString(String(state.maxSpeedKmh) + " km/h", 16, 48, 4);
-
+    tft.drawString(String(state.maxSpeedKmh) + " km/h", 16, 56, 4);
     tft.setTextColor(TFT_WHITE, CARD_COLOR);
-    tft.drawString(String(state.maxRpm) + " rpm", 16, 82, 2);
+    tft.drawString(String(state.maxRpm) + " rpm", 16, 88, 2);
 
     // 2. Maksymalna temperatura silnika
+    tft.setTextColor(state.maxEngineTempC > Config::ENGINE_TEMP_WARN ? ACCENT_RED : TFT_WHITE, CARD_COLOR);
     tft.drawString(String(state.maxEngineTempC) + " C", 172, 62, 4);
 
     // 3. Minimalne napięcie akumulatora przy rozruchu
@@ -60,6 +55,7 @@ void MotoStatsScreen::update(TFT_eSPI& tft, const MotoState& state) {
     tft.setTextColor(dtcCol, CARD_COLOR);
     String dtcText = (state.dtcCount == 0) ? "0 (OK)" : String(state.dtcCount) + " BLEDY";
     tft.drawString(dtcText, 172, 158, 4);
+    tft.setTextPadding(0);
 }
 
 bool MotoStatsScreen::onModeLongPress(MotoState& state) {
