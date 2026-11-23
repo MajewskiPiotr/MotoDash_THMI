@@ -40,7 +40,7 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     card(tft, 162, 22, 150, 84);
     Icons::droplet(tft, 170, 30, ACCENT_BLUE);
     label(tft, "SPALANIE", 194, 33, 80);
-    label(tft, "ŚREDNIO", 252, 58, 56, RIGHT);
+    label(tft, "ŚREDNIO", 256, 58, 52, RIGHT);
 
     // Środkowy rząd: akumulator | otoczenie | paliwo + zasięg
     card(tft, 8, 112, 72, 78);
@@ -71,11 +71,12 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
         tft.fillRoundRect(barX, barY, w, 4, 2, c);
     }
 
-    // 2. Spalanie: chwilowe duże (od 10 bez miejsca po przecinku), średnie z baku mniejsze z boku
-    float inst = state.instFuel100;
-    fInst.show(tft, FontNumXL, inst >= 10.0f ? String((int)roundf(inst)) : String(inst, 1),
-               168, 50, 84, 44, LEFT, TFT_WHITE, CARD);
-    fAvg.show(tft, FontNumM, String(state.tankAvgFuel100, 1), 252, 72, 56, 18, RIGHT, ACCENT_GREEN, CARD);
+    // 2. Spalanie: chwilowe duże z jedną cyfrą po przecinku (od 20 - zdarza się tylko przy mocnym
+    //    przyspieszaniu - bez niej, bo się nie mieści), średnie z baku mniejsze z boku
+    float inst = constrain(state.instFuel100, 0.0f, 99.0f);
+    fInst.show(tft, FontNumXL, inst >= 20.0f ? String((int)roundf(inst)) : String(inst, 1),
+               166, 50, 88, 44, LEFT, TFT_WHITE, CARD);
+    fAvg.show(tft, FontNumM, String(state.tankAvgFuel100, 1), 256, 72, 52, 18, RIGHT, ACCENT_GREEN, CARD);
 
     // 3. Akumulator i temperatura otoczenia (niebieska poniżej 3 C - ryzyko gołoledzi)
     fVolt.show(tft, FontNumL, String(state.voltageV, 1), 8, 150, 72, 26, CENTER, TFT_WHITE, CARD);
