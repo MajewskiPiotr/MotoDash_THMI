@@ -1,5 +1,6 @@
 #pragma once
 #include <Arduino.h>
+#include "LogTee.h" // Serial.* -> USB + plik /log.txt na karcie SD
 struct TripRecord {
     int   id          = 0;
     int   durationMin = 0;

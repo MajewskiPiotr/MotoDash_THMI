@@ -51,5 +51,6 @@ private:
     void handleSetTime();
     void handleGpxList();   // Lista plików GPX z karty SD (JSON)
     void handleGpxFile();   // Pobranie jednego pliku GPX
+    void handleLog();       // Log z karty SD (/log.txt)
     void handleNotFound();
 };

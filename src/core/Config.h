@@ -1,5 +1,6 @@
 #pragma once          // Zabezpiecza plik przed wielokrotnym dołączeniem podczas kompilacji
 #include <Arduino.h>  // Podstawowe typy danych (uint8_t, String itp.)
+#include "LogTee.h"   // Serial.* -> USB + plik /log.txt na karcie SD
 
 // Przestrzeń nazw grupująca wszystkie stałe sprzętowe i parametry motocykla
 namespace Config {

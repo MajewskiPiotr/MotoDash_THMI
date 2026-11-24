@@ -75,6 +75,7 @@ void setup() {
     tripsScreen.initSdAndLoad(motoState);
     refuelLog.init(fuelCalculator.odometerKm());
     refuelLog.setSdAvailable(tripsScreen.hasSd());
+    LogSerial.attachSd(tripsScreen.hasSd()); // Od teraz log trafia też do /log.txt na karcie
     trackLogger.init(tripsScreen.hasSd());
     refuelLog.setTrackLogger(&trackLogger);
     wifiPortal.init(&motoState, &settingsScreen, &tripsScreen, &refuelLog, &fuelCalculator, &trackLogger); // Hotspot startuje dopiero z ekranu Wi-Fi
@@ -106,4 +107,7 @@ void loop() {
 
     // 5. Odświeżenie aktualnie wybranego widoku na ekranie
     screenManager.render(motoState);
+
+    // 6. Zapis logu na kartę SD (co ~2 s)
+    LogSerial.loop();
 }

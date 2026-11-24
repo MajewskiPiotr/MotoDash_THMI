@@ -73,7 +73,7 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
 </div></section>
 <section id="t1" class="hide"><div class="card">
  <table><thead><tr><th>#</th><th>Czas</th><th>km</th><th>L/100</th><th>km/h</th></tr></thead><tbody id="trips"></tbody></table>
- <a class="btn" href="/trasy.csv">Pobierz CSV</a>
+ <a class="btn" href="/trasy.csv">Pobierz CSV</a> <a class="btn" href="/log.txt">Log</a>
 </div><div class="card"><div class="lbl">Zapisane trasy GPS (GPX - Google Earth, OsmAnd, Strava)</div>
  <table><tbody id="gpx"></tbody></table>
 </div></section>
@@ -192,6 +192,7 @@ void WifiPortal::init(MotoState* statePtr, SettingsScreen* settingsPtr, TripsScr
     server.on("/api/time",     HTTP_POST, [this]() { handleSetTime(); });
     server.on("/api/gpx",      HTTP_GET,  [this]() { handleGpxList(); });
     server.on("/gpx",          HTTP_GET,  [this]() { handleGpxFile(); });
+    server.on("/log.txt",      HTTP_GET,  [this]() { handleLog(); });
     server.onNotFound(                    [this]() { handleNotFound(); });
 
     WiFi.mode(WIFI_OFF); // Radio wyłączone, dopóki użytkownik nie włączy hotspotu
@@ -466,4 +467,25 @@ void WifiPortal::handleGpxFile() {
     server.sendHeader("Content-Disposition", "attachment; filename=" + f);
     server.streamFile(file, "application/gpx+xml");
     file.close();
+}
+
+// Log z karty SD (najnowsze wpisy na końcu pliku). ?all=1 = cały plik, domyślnie ostatnie 64 kB
+void WifiPortal::handleLog() {
+    if (!trips || !trips->hasSd() || !SD_MMC.exists(LogTee::PATH)) {
+        server.send(404, "text/plain", "Brak logu (karta SD?)");
+        return;
+    }
+    LogSerial.loop();
+    fs::File f = SD_MMC.open(LogTee::PATH, FILE_READ);
+    if (!f) { server.send(404, "text/plain", "Brak logu"); return; }
+    size_t size = f.size();
+    size_t from = (!server.hasArg("all") && size > 65536) ? size - 65536 : 0;
+    f.seek(from);
+    // Wysyłamy kawałkami (streamFile podałby rozmiar całego pliku)
+    server.setContentLength(size - from);
+    server.send(200, "text/plain; charset=utf-8", "");
+    static uint8_t chunk[1024];
+    size_t n;
+    while ((n = f.read(chunk, sizeof(chunk))) > 0) server.sendContent((const char*)chunk, n);
+    f.close();
 }
