@@ -1,8 +1,9 @@
 #pragma once
 #include "Screen.h"
 #include "CanReader.h"
+#include "SmoothText.h"
 
-// Ekran 2: Statystyki motocykla (Max RPM, Max Temp, Min napięcie startowe, błędy ECU).
+// Ekran 2: Statystyki motocykla - rekordy od zerowania (prędkość, obroty, temperatura, napięcie przy rozruchu) i błędy ECU.
 class MotoStatsScreen : public Screen {
 public:
     explicit MotoStatsScreen(CanReader* can) : canReader(can) {}
@@ -14,4 +15,6 @@ public:
 
 private:
     CanReader* canReader;
+    // Wartości w gładkiej czcionce - rysowane tylko po zmianie
+    SmoothText::Field fSpeed, fRpm, fTemp, fVolt, fDtc, fDtcNote;
 };
