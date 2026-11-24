@@ -26,16 +26,17 @@ static void label(TFT_eSPI& tft, const char* txt, int x, int y, int w,
 void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     lastTempBarW = -1; lastFuelSegs = -1; lastFuelCol = 0;
     lastTireState[0] = lastTireState[1] = -1;
-    fTemp.reset(); fInst.reset(); fAvg.reset(); fVolt.reset(); fAmb.reset(); fFuel.reset(); fRange.reset();
+    fTemp.reset(); fAlt.reset(); fInst.reset(); fAvg.reset(); fVolt.reset(); fAmb.reset(); fFuel.reset(); fRange.reset();
     for (int i = 0; i < 2; i++) { fTireBar[i].reset(); fTireTemp[i].reset(); }
 
     tft.fillScreen(BG);
     label(tft, "JAZDA", 10, 3, 60, LEFT, TEXT_MUTED, BG);
 
-    // Górny rząd: silnik | spalanie
-    card(tft, 8, 22, 150, 84);
-    Icons::thermometer(tft, 16, 30, ACCENT_ORANGE, CARD);
-    label(tft, "SILNIK", 40, 33, 70);
+    // Górny rząd: silnik | wysokość | spalanie
+    card(tft, 8, 22, 72, 84);
+    Icons::thermometer(tft, 34, 30, ACCENT_ORANGE, CARD);
+    card(tft, 86, 22, 72, 84);
+    Icons::mountain(tft, 112, 30, TFT_LIGHTGREY, CARD);
 
     card(tft, 162, 22, 150, 84);
     Icons::droplet(tft, 170, 30, ACCENT_BLUE);
@@ -57,11 +58,17 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
 
 // Odświeża wartości (co ~150 ms) - każde pole rysuje się tylko po zmianie
 void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
-    // 1. Silnik: duża liczba ze znakiem stopnia + pasek zakresu 40..120 C
+    // 1. Silnik: liczba ze znakiem stopnia + pasek zakresu 40..120 C
     uint16_t tCol = (state.engineTempC > Config::ENGINE_TEMP_WARN) ? ACCENT_RED : TFT_WHITE;
-    fTemp.show(tft, FontNumXL, String(state.engineTempC) + "\xC2\xB0", 16, 50, 134, 44, LEFT, tCol, CARD);
+    fTemp.show(tft, FontNumL, String(state.engineTempC) + "\xC2\xB0", 8, 60, 72, 26, CENTER, tCol, CARD);
 
-    const int barX = 18, barY = 96, barW = 130;
+    // Wysokość n.p.m. z barometru BME280 ("-" gdy brak czujnika)
+    if (state.baroOk)
+        fAlt.show(tft, FontNumL, String((int)roundf(state.altitudeM)), 86, 60, 72, 26, CENTER, TFT_WHITE, CARD);
+    else
+        fAlt.show(tft, FontNumL, "-", 86, 60, 72, 26, CENTER, TEXT_MUTED, CARD);
+
+    const int barX = 18, barY = 94, barW = 52;
     float r = constrain((state.engineTempC - 40) / 80.0f, 0.0f, 1.0f);
     int w = max(4, (int)(barW * r));
     if (w != lastTempBarW) {
