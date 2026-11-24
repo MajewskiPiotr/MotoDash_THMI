@@ -65,7 +65,7 @@ void setup() {
     // 4. Uruchomienie poszczególnych modułów sprzętowych i logiki
     canReader.init();
     envSensor.init();
-    gpsService.init();
+    if (!Config::CAN_ON_GPS_PORT) gpsService.init(); // Złącze IO17/IO18: GPS albo (test) moduł CAN
     tpmsScanner.init();
     fuelCalculator.init(motoState);
     buttonHandler.init(&motoState, &screenManager);
@@ -89,7 +89,7 @@ void loop() {
 
     // 2. Zbieranie aktualnych odczytów z motocykla i czujników
     canReader.update(motoState);
-    gpsService.update(motoState);
+    if (!Config::CAN_ON_GPS_PORT) gpsService.update(motoState);
     envSensor.update(motoState);
     tpmsScanner.update(motoState);
 

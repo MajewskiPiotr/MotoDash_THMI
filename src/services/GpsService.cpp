@@ -32,7 +32,8 @@ void GpsService::applyConfig(uint8_t i) {
     len = 0;
     Serial1.end();
     Serial1.setRxBufferSize(1024);
-    Serial1.begin(CONFIGS[i].baud, SERIAL_8N1, CONFIGS[i].rx, CONFIGS[i].tx);
+    // Tylko odbiór (TX = -1): do modułu nic nie wysyłamy, a drugi pin złącza zostaje nieaktywny
+    Serial1.begin(CONFIGS[i].baud, SERIAL_8N1, CONFIGS[i].rx, -1);
 }
 
 void GpsService::update(MotoState& s) {

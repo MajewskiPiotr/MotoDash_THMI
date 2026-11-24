@@ -21,6 +21,9 @@ namespace Config {
     constexpr uint8_t PIN_BTN_ACTION   = 16; // Czerwony przycisk akcji (GPIO 16)
     constexpr uint8_t PIN_GPS_A        = 17; // Złącze Grove GPS (UART) - który pin nadaje, wykrywa się samo
     constexpr uint8_t PIN_GPS_B        = 18;
+    // TEST CAN: true = w złączu IO17/IO18 zamiast GPS jest moduł CAN (SN65HVD230: CTX->IO17, CRX->IO18).
+    // GPS jest wtedy wyłączony. false = GPS w złączu, dane silnika z symulacji.
+    constexpr bool    CAN_ON_GPS_PORT  = false;
 
     // --- EKRAN TANKOWANIA ---
     constexpr float         REFUEL_PROMPT_L   = 3.0f;  // Poniżej tej ilości paliwa [L] ekran Tankowania otwiera się sam po starcie
