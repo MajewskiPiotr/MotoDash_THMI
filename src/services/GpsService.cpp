@@ -149,7 +149,8 @@ bool GpsService::feedLine(const char* line, MotoState& s) {
 
 void GpsService::handleRmc(char** f, int n, MotoState& s) {
     if (n < 10) return;
-    bool valid = f[2][0] == 'A';
+    // RMC "A" bez satelitów (np. pozycja z pamięci modułu przy baterii) to nie jest prawdziwa pozycja
+    bool valid = f[2][0] == 'A' && ggaFix;
 
     // Czas i data: hhmmss(.ss) i ddmmyy
     if (strlen(f[1]) >= 6 && strlen(f[9]) == 6) {
@@ -184,7 +185,8 @@ void GpsService::handleGsv(const char* talker, char** f, int n) {
 void GpsService::handleGga(char** f, int n, MotoState& s) {
     if (n < 10) return;
     s.gpsSats = (uint8_t)atoi(f[7]);
-    if (atoi(f[6]) == 0) return; // Brak pozycji
+    ggaFix = atoi(f[6]) > 0 && s.gpsSats >= 3;
+    if (!ggaFix) return; // Brak pozycji
     if (f[8][0]) s.gpsHdop = (float)atof(f[8]);
     if (f[9][0]) s.gpsAltM = (float)atof(f[9]);
 }

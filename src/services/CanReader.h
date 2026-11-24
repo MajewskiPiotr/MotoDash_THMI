@@ -24,6 +24,8 @@ private:
     bool          driverOn     = false;
     unsigned long probeSentMs  = 0;
     unsigned long nextProbeMs  = 0;
+    uint32_t      probeRounds  = 0;     // Pełne rundy wykrywania (diagnostyka w logu)
+    unsigned long lastDiagMs   = 0;
 
     // Odpytywanie
     uint8_t       pidIdx       = 0;

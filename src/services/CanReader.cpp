@@ -117,11 +117,26 @@ void CanReader::update(MotoState& s) {
             return;
         }
         if (now - probeSentMs > PROBE_WAIT_MS) {
+            // Diagnostyka: liczniki błędów mówią, czy ktoś na szynie potwierdza naszą ramkę
+            twai_status_info_t st;
+            if ((probeRounds < 2 || now - lastDiagMs > 30000) && twai_get_status_info(&st) == ESP_OK) {
+                if (combo == COMBO_COUNT - 1) lastDiagMs = now;
+                const char* why = st.bus_error_count > 0 ? "bledy na szynie (zla predkosc lub zamienione CANH/CANL)"
+                                : st.tx_error_counter >= 128 ? "nikt nie potwierdza ramki (zaplon? kable CANH/CANL? masa?)"
+                                : st.msgs_to_tx > 0 ? "ramka nie wyszla z modulu (CTX/CRX? zasilanie 3V3?)"
+                                : "ramka wyslana i potwierdzona, ale brak odpowiedzi OBD";
+                Serial.printf("[CAN] Proba %lu kb/s, CTX=IO%d: bledy TX %lu, RX %lu, szyny %lu, do wyslania %lu -> %s\n",
+                              (unsigned long)COMBOS[combo].kbps,
+                              COMBOS[combo].swapped ? Config::PIN_CAN_B : Config::PIN_CAN_A,
+                              (unsigned long)st.tx_error_counter, (unsigned long)st.rx_error_counter,
+                              (unsigned long)st.bus_error_count, (unsigned long)st.msgs_to_tx, why);
+            }
             stopDriver();
             combo = (combo + 1) % COMBO_COUNT;
             if (combo == 0) {
+                probeRounds++;
                 nextProbeMs = now + PROBE_PAUSE_MS; // Cała runda bez odpowiedzi - zapłon wyłączony?
-                if (now - lastLogMs > 30000) {
+                if (now - lastLogMs > 20000) {
                     lastLogMs = now;
                     Serial.println("[CAN] Brak odpowiedzi sterownika (zaplon wlaczony? kable CANH/CANL?) - probuje dalej");
                 }

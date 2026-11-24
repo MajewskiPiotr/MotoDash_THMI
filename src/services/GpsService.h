@@ -30,6 +30,7 @@ private:
     unsigned long lastGoodMs  = 0;     // Ostatnie poprawne zdanie NMEA
     unsigned long lastFixMs   = 0;     // Ostatnie zdanie z ustaloną pozycją
     bool          clockSynced = false;
+    bool          ggaFix      = false; // GGA: jakość > 0 i >= 3 satelity (RMC bywa "A" bez satelitów)
     bool          hadFix      = false; // Do logu: złapanie / utrata pozycji
     unsigned long searchStartMs = 0;   // Od kiedy szukamy pozycji
     unsigned long lastSearchLogMs = 0;
