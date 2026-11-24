@@ -3,6 +3,7 @@
 #include "SmoothText.h"
 #include "Icons.h" // Wspólna paleta kolorów
 #include "Config.h"
+#include <Preferences.h>
 #include <SD_MMC.h> // Wbudowana biblioteka ESP32 do kart microSD w trybie SD_MMC (tak podłączony jest slot T-HMI)
 
 // Inicjalizuje kartę microSD przy starcie systemu lub ładuje dane przykładowe do podglądu
@@ -17,7 +18,28 @@ void TripsScreen::initSdAndLoad(MotoState& state) {
     // Próba uruchomienia karty microSD (jeśli jest włożona w slot T-HMI)
     // Slot T-HMI działa w trybie SD_MMC 1-bit (piny w Config.h). Nie używamy SPI - ta magistrala obsługuje dotyk.
     SD_MMC.setPins(Config::PIN_SD_CLK, Config::PIN_SD_CMD, Config::PIN_SD_D0);
-    if (SD_MMC.begin("/sdcard", true /* tryb 1-bit */, false, Config::SD_FREQ_KHZ)) {
+    bool mounted = SD_MMC.begin("/sdcard", true /* tryb 1-bit */, false, Config::SD_FREQ_KHZ);
+
+    // Karta jest, ale ma nieobsługiwany system plików (np. exFAT/NTFS) - formatujemy JEDEN raz na FAT32.
+    // Znacznik w pamięci Flash pilnuje, żeby przy złym styku nie kasować później kart z trasami.
+    if (!mounted && Config::SD_FORMAT_ONCE) {
+        Preferences prefs;
+        prefs.begin("motodash", false);
+        if (!prefs.getBool("sdFmtDone", false)) {
+            Serial.println("[TripsScreen] Karta nieczytelna - formatuje na FAT32 (jednorazowo, moze potrwac do minuty)...");
+            SD_MMC.end();
+            mounted = SD_MMC.begin("/sdcard", true, true /* formatuj, gdy nie da się zamontować */, Config::SD_FREQ_KHZ);
+            if (mounted) {
+                prefs.putBool("sdFmtDone", true);
+                Serial.println("[TripsScreen] Karta sformatowana");
+            } else {
+                Serial.println("[TripsScreen] Formatowanie nieudane - sformatuj karte na FAT32 w komputerze");
+            }
+        }
+        prefs.end();
+    }
+
+    if (mounted) {
         sdAvailable = true;
         Serial.println("[TripsScreen] Karta microSD zamontowana poprawnie!");
 

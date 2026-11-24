@@ -30,6 +30,10 @@ private:
     unsigned long lastGoodMs  = 0;     // Ostatnie poprawne zdanie NMEA
     unsigned long lastFixMs   = 0;     // Ostatnie zdanie z ustaloną pozycją
     bool          clockSynced = false;
+    bool          hadFix      = false; // Do logu: złapanie / utrata pozycji
+    unsigned long searchStartMs = 0;   // Od kiedy szukamy pozycji
+    unsigned long lastSearchLogMs = 0;
+    uint8_t       inView[4]   = {0, 0, 0, 0}; // Satelity widoczne wg systemu: GPS, BeiDou, GLONASS, Galileo
     unsigned long lastSyncMs  = 0;
 
     char    buf[100];
@@ -38,5 +42,8 @@ private:
     void applyConfig(uint8_t i);
     void handleRmc(char** f, int n, MotoState& s);
     void handleGga(char** f, int n, MotoState& s);
+    void handleGsv(const char* talker, char** f, int n);
+    void logFixChanges(MotoState& s);
+    uint8_t satsInView() const { return inView[0] + inView[1] + inView[2] + inView[3]; }
     void syncClock(time_t utc, bool fixValid);
 };

@@ -45,6 +45,7 @@ void GpsService::update(MotoState& s) {
                     lastGoodMs = millis();
                     if (!locked && ++goodCount >= 2) {
                         locked = true;
+                        searchStartMs = lastSearchLogMs = millis();
                         Serial.printf("[GPS] Modul wykryty: RX=IO%d, TX=IO%d, %lu bodow\n",
                                       CONFIGS[cfgIdx].rx, CONFIGS[cfgIdx].tx, (unsigned long)CONFIGS[cfgIdx].baud);
                     }
@@ -57,6 +58,8 @@ void GpsService::update(MotoState& s) {
             len = 0; // Za długa linia - śmieci (zła prędkość transmisji)
         }
     }
+
+    logFixChanges(s);
 
     unsigned long now = millis();
     if (locked) {
@@ -72,6 +75,26 @@ void GpsService::update(MotoState& s) {
         }
     } else if (now - cfgSinceMs > PROBE_MS) {
         applyConfig((cfgIdx + 1) % CONFIG_COUNT); // Następna kombinacja pinów / prędkości
+    }
+}
+
+// Log: złapanie i utrata pozycji, a w trakcie szukania co 30 s ile satelitów widać
+void GpsService::logFixChanges(MotoState& s) {
+    unsigned long now = millis();
+    bool fix = s.gpsStatus == 2;
+    if (fix && !hadFix) {
+        hadFix = true;
+        Serial.printf("[GPS] Pozycja ustalona po %lu s: %d sat. (widocznych %d), HDOP %.1f, %.6f, %.6f, wys. %.0f m\n",
+                      (now - searchStartMs) / 1000, s.gpsSats, satsInView(), s.gpsHdop, s.gpsLat, s.gpsLon, s.gpsAltM);
+    } else if (!fix && hadFix) {
+        hadFix = false;
+        searchStartMs = now;
+        lastSearchLogMs = now;
+        Serial.println("[GPS] Utracono pozycje - szukam satelitow");
+    } else if (!fix && locked && now - lastSearchLogMs >= 30000) {
+        lastSearchLogMs = now;
+        Serial.printf("[GPS] Szukam pozycji od %lu s, widocznych satelitow: %d (GPS %d, BeiDou %d, GLONASS %d, Galileo %d)\n",
+                      (now - searchStartMs) / 1000, satsInView(), inView[0], inView[1], inView[2], inView[3]);
     }
 }
 
@@ -119,6 +142,7 @@ bool GpsService::feedLine(const char* line, MotoState& s) {
     const char* type = f[0] + 3;
     if (strcmp(type, "RMC") == 0) handleRmc(f, cnt, s);
     else if (strcmp(type, "GGA") == 0) handleGga(f, cnt, s);
+    else if (strcmp(type, "GSV") == 0) handleGsv(f[0] + 1, f, cnt);
     return true;
 }
 
@@ -144,6 +168,16 @@ void GpsService::handleRmc(char** f, int n, MotoState& s) {
     s.gpsStatus   = 2;
     s.gpsFixCount++;
     lastFixMs = millis();
+}
+
+// $xxGSV,liczba_zdan,nr_zdania,satelity_widoczne,... - liczymy osobno dla każdego systemu
+void GpsService::handleGsv(const char* talker, char** f, int n) {
+    if (n < 4) return;
+    int idx = (talker[0] == 'G' && talker[1] == 'P') ? 0 :
+              (talker[0] == 'B' && talker[1] == 'D') || (talker[0] == 'G' && talker[1] == 'B') ? 1 :
+              (talker[0] == 'G' && talker[1] == 'L') ? 2 :
+              (talker[0] == 'G' && talker[1] == 'A') ? 3 : -1;
+    if (idx >= 0) inView[idx] = (uint8_t)atoi(f[3]);
 }
 
 void GpsService::handleGga(char** f, int n, MotoState& s) {

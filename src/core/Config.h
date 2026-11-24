@@ -14,6 +14,9 @@ namespace Config {
     constexpr uint8_t PIN_SD_CMD       = 11;
     constexpr uint8_t PIN_SD_D0        = 13;
     constexpr int     SD_FREQ_KHZ      = 20000; // Domyślne 40 MHz bywa za szybkie dla T-HMI - karta nie jest wykrywana
+    // true = karta, której nie da się odczytać (exFAT/NTFS), zostanie sformatowana na FAT32 - tylko raz na tym
+    // urządzeniu (znacznik "sdFmtDone" w pamięci Flash). Kasuje całą zawartość karty!
+    constexpr bool    SD_FORMAT_ONCE   = true;
     constexpr uint8_t PIN_BTN_MODE     = 15; // Niebieski przycisk nawigacji (GPIO 15)
     constexpr uint8_t PIN_BTN_ACTION   = 16; // Czerwony przycisk akcji (GPIO 16)
     constexpr uint8_t PIN_GPS_A        = 17; // Złącze Grove GPS (UART) - który pin nadaje, wykrywa się samo
