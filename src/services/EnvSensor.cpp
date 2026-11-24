@@ -34,8 +34,9 @@ bool EnvSensor::writeReg(uint8_t reg, uint8_t val) {
 bool EnvSensor::readRegs(uint8_t reg, uint8_t* buf, uint8_t len) {
     Wire.beginTransmission(bmeAddr);
     Wire.write(reg);
-    if (Wire.endTransmission(false) != 0) return false;
-    if (Wire.requestFrom(bmeAddr, len) != len) return false;
+    uint8_t e = Wire.endTransmission(false);
+    if (e != 0) { lastErr = String("I2C blad ") + String(e) + (e == 2 ? " (czujnik nie odpowiada)" : ""); return false; }
+    if (Wire.requestFrom(bmeAddr, len) != len) { lastErr = "I2C: za malo bajtow"; return false; }
     for (uint8_t i = 0; i < len; i++) buf[i] = Wire.read();
     return true;
 }
@@ -73,7 +74,7 @@ bool EnvSensor::readBme(float& tempC, float& hPa) {
     if (!readRegs(0xF7, d, 6)) return false;
     int32_t adcP = ((int32_t)d[0] << 12) | ((int32_t)d[1] << 4) | (d[2] >> 4);
     int32_t adcT = ((int32_t)d[3] << 12) | ((int32_t)d[4] << 4) | (d[5] >> 4);
-    if (adcT == 0x80000 || adcP == 0x80000) return false; // pomiar jeszcze niegotowy
+    if (adcT == 0x80000 || adcP == 0x80000) { lastErr = "pomiar niegotowy (0x80000)"; return false; }
 
     int32_t v1 = ((((adcT >> 3) - ((int32_t)T1 << 1))) * ((int32_t)T2)) >> 11;
     int32_t v2 = (((((adcT >> 4) - ((int32_t)T1)) * ((adcT >> 4) - ((int32_t)T1))) >> 12) * ((int32_t)T3)) >> 14;
@@ -86,14 +87,16 @@ bool EnvSensor::readBme(float& tempC, float& hPa) {
     p2 = p2 + (((int64_t)P4) << 35);
     p1 = ((p1 * p1 * (int64_t)P3) >> 8) + ((p1 * (int64_t)P2) << 12);
     p1 = (((((int64_t)1) << 47) + p1)) * ((int64_t)P1) >> 33;
-    if (p1 == 0) return false;
+    if (p1 == 0) { lastErr = "bledne wspolczynniki kalibracji"; return false; }
     int64_t p = 1048576 - adcP;
     p = (((p << 31) - p2) * 3125) / p1;
     p1 = (((int64_t)P9) * (p >> 13) * (p >> 13)) >> 25;
     p2 = (((int64_t)P8) * p) >> 19;
     p = ((p + p1 + p2) >> 8) + (((int64_t)P7) << 4);
     hPa = (float)((uint32_t)p) / 25600.0f; // Pa*256 -> hPa
-    return hPa > 300.0f && hPa < 1100.0f;
+    if (hPa > 300.0f && hPa < 1100.0f) return true;
+    lastErr = String("cisnienie poza zakresem: ") + String(hPa, 1) + " hPa, temp " + String(tempC, 1) + " C";
+    return false;
 }
 
 void EnvSensor::update(MotoState& state) {
@@ -138,9 +141,22 @@ void EnvSensor::update(MotoState& state) {
                               calibBaseAlt, hPa, seaLevelHpa);
             }
             state.altitudeM = 44330.0f * (1.0f - powf(hPa / seaLevelHpa, 0.1903f));
+            if (bmeErrors >= 3) Serial.println("[EnvSensor] BME280 znowu dziala");
+            bmeErrors = 0;
         } else {
             state.baroOk = false;
-            Serial.println("[EnvSensor] Blad odczytu BME280");
+            bmeErrors++;
+            // Log co 10 s, żeby nie zasypać konsoli; po 3 błędach z rzędu ponowne wykrycie czujnika
+            if (bmeErrors == 1 || bmeErrors % 5 == 0)
+                Serial.println("[EnvSensor] Blad odczytu BME280 (0x" + String(bmeAddr, HEX) + "): " + lastErr +
+                               " [" + String(bmeErrors) + " z rzedu]");
+            if (bmeErrors % 3 == 0) {
+                uint8_t a = bmeAddr;
+                if (!initBme(a) && !initBme(a == 0x76 ? 0x77 : 0x76)) {
+                    bmeAddr = a; // zostawiamy adres, próbujemy dalej
+                    Serial.println("[EnvSensor] BME280 nie odpowiada na 0x76 ani 0x77 - sprawdz kable SDA/SCL/VCC/GND");
+                }
+            }
         }
     }
 

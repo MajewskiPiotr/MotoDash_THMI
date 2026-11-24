@@ -18,6 +18,8 @@ private:
     unsigned long lastReadMs = 0;
     bool    ahtReady  = false;
     uint8_t bmeAddr   = 0;     // 0 = brak barometru
+    uint16_t bmeErrors = 0;    // Błędy odczytu z rzędu
+    String   lastErr;          // Przyczyna ostatniego błędu (do logu)
     bool    hasHumid  = false; // true = BME280, false = BMP280 (bez wilgotności)
 
     // Kalibracja altymetru: ciśnienie odniesienia (QNH) z wysokości GPS, a bez GPS
