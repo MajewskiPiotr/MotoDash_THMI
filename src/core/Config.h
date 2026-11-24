@@ -46,7 +46,7 @@ namespace Config {
     constexpr unsigned long TPMS_STALE_MS = 15UL * 60 * 1000; // Po tylu ms bez danych odczyt uznajemy za nieaktualny
     // Tryb rozpoznawania: wypisuje w Serial Monitorze surowe dane z pobliskich urządzeń BLE (silny sygnał).
     // Przydaje się, gdy czujnik nadaje w innym formacie - wyślij log, a dopiszemy dekoder. Potem ustaw false.
-    constexpr bool TPMS_DEBUG_SCAN = true;
+    constexpr bool TPMS_DEBUG_SCAN = false;
     constexpr int  TPMS_DEBUG_MIN_RSSI = -65; // Tylko urządzenia blisko płytki (połóż czujnik obok)
     // Identyfikator z obudowy czujnika (np. "C225B17B"). Każde ogłoszenie, którego adres lub dane zawierają
     // ten ciąg (w dowolnej kolejności bajtów), jest logowane jako "[TPMS-ID]" - bez filtra siły sygnału.
@@ -63,7 +63,7 @@ namespace Config {
     // --- DANE TESTOWE ---
     // true = przy każdym starcie w baku zostaje TEST_FUEL_LEFT_L litrów (do testu automatycznego ekranu Tankowania).
     // PRZED JAZDĄ USTAW false, inaczej po każdym uruchomieniu stan baku będzie nadpisywany!
-    constexpr bool  TEST_LOW_FUEL_ON_BOOT = true;
+    constexpr bool  TEST_LOW_FUEL_ON_BOOT = false;
     constexpr float TEST_FUEL_LEFT_L      = 2.0f;  // Ile litrów zostaje w baku przy starcie
     constexpr float TEST_AVG_FUEL100      = 5.5f;  // Średnie spalanie z baku przyjęte w teście [L/100km]
 

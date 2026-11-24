@@ -20,6 +20,8 @@ size_t LogTee::write(const uint8_t* data, size_t n) {
     size_t k = n < room ? n : room; // Przy przepełnieniu (karta wolna/brak) gubimy nadmiar, nie blokujemy
     memcpy(buf + len, data, k);
     len += k;
+    for (size_t i = 0; i < n; i++) ring[(total + i) % RING] = (char)data[i];
+    total += n;
     portEXIT_CRITICAL(&logLock);
     return n;
 }
@@ -43,6 +45,18 @@ void LogTee::attachSd(bool sdOk) {
 }
 
 void LogTee::loop() { flushToSd(false); }
+
+size_t LogTee::readSince(uint32_t& pos, char* out, size_t max) {
+    portENTER_CRITICAL(&logLock);
+    uint32_t oldest = total > RING ? total - RING : 0;
+    if (pos < oldest || pos > total) pos = oldest;
+    size_t n = total - pos;
+    if (n > max) n = max;
+    for (size_t i = 0; i < n; i++) out[i] = ring[(pos + i) % RING];
+    pos += n;
+    portEXIT_CRITICAL(&logLock);
+    return n;
+}
 
 void LogTee::flushToSd(bool force) {
     if (!sd || len == 0) return;

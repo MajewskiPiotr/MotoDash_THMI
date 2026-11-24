@@ -55,7 +55,7 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  .tip{position:fixed;pointer-events:none;background:#0b0d10;border:1px solid #2a3240;border-radius:8px;padding:8px 10px;font-size:13px;display:none;z-index:5}
 </style></head><body>
 <header>MotoDash</header>
-<nav><button id="b0" class="on" onclick="tab(0)">Stan</button><button id="b1" onclick="tab(1)">Trasy</button><button id="b3" onclick="tab(3)">Tankowania</button><button id="b2" onclick="tab(2)">Ustawienia</button></nav>
+<nav><button id="b0" class="on" onclick="tab(0)">Stan</button><button id="b1" onclick="tab(1)">Trasy</button><button id="b3" onclick="tab(3)">Tankowania</button><button id="b2" onclick="tab(2)">Ustawienia</button><button id="b4" onclick="tab(4)">Log</button></nav>
 <main>
 <section id="t0"><div class="grid">
  <div class="card"><div class="lbl">Paliwo w baku</div><div class="val" id="fuel">-</div></div>
@@ -91,6 +91,12 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  <a class="btn" href="/tankowania.csv">Pobierz CSV</a>
  <div class="note">Przeliczenie = (litry przy "do pelna" + dolewki z okresu) / km okresu x 100. Mnoznik: srednia wazona litrami z 3 ostatnich waznych bakow; bak z roznica powyzej 30% jest pomijany.</div></div>
 </section>
+<section id="t4" class="hide"><div class="card">
+ <label style="display:inline"><input type="checkbox" id="lp"> wstrzymaj</label>
+ <label style="display:inline;margin-left:12px">filtr: <input id="lf" placeholder="np. CAN" style="width:110px" oninput="logShow()"></label>
+ <pre id="lg" style="height:60vh;overflow:auto;font-size:11px;white-space:pre-wrap;background:#000;color:#cfc;padding:6px;margin-top:8px"></pre>
+ <a class="btn" href="/log.txt">Pobierz log z karty</a>
+</div></section>
 <section id="t2" class="hide"><div class="card"><form id="f" onsubmit="save();return false">
  <label>Mnoznik kalibracji spalania (0.70 - 1.30)</label><input name="cal" type="number" step="0.01" min="0.7" max="1.3">
  <label>Pojemnosc baku [L] (10 - 30)</label><input name="tank" type="number" step="0.5" min="10" max="30">
@@ -104,7 +110,12 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
 <script>
 let filled=false;
 function $(i){return document.getElementById(i)}
-function tab(n){for(let i=0;i<4;i++){$('t'+i).classList.toggle('hide',i!=n);$('b'+i).classList.toggle('on',i==n)}if(n==1){trips();gpx()}if(n==3)refuels()}
+let lpos=0,ltxt='',ltimer=null;
+async function logPoll(){if($('lp').checked)return;try{const r=await fetch('/api/log?pos='+lpos);lpos=+r.headers.get('X-Pos');const t=await r.text();
+ if(t){ltxt=(ltxt+t).slice(-60000);logShow()}}catch(e){}}
+function logShow(){const f=$('lf').value.trim().toLowerCase(),e=$('lg'),end=e.scrollTop+e.clientHeight>=e.scrollHeight-20;
+ e.textContent=f?ltxt.split('\n').filter(l=>l.toLowerCase().includes(f)).join('\n'):ltxt;if(end)e.scrollTop=e.scrollHeight}
+function tab(n){if(ltimer){clearInterval(ltimer);ltimer=null}if(n==4){logPoll();ltimer=setInterval(logPoll,1000)}for(let i=0;i<5;i++){$('t'+i).classList.toggle('hide',i!=n);$('b'+i).classList.toggle('on',i==n)}if(n==1){trips();gpx()}if(n==3)refuels()}
 function u(v,un){return v+' <span class="unit">'+un+'</span>'}
 async function status(){try{const d=await (await fetch('/api/status')).json();
  const r=d.fuel/d.cap;$('fuel').innerHTML=u(d.fuel.toFixed(1),'/ '+d.cap.toFixed(1)+' L');$('fuel').className='val '+(r<0.1?'red':r<0.25?'yel':'');
@@ -193,6 +204,7 @@ void WifiPortal::init(MotoState* statePtr, SettingsScreen* settingsPtr, TripsScr
     server.on("/api/gpx",      HTTP_GET,  [this]() { handleGpxList(); });
     server.on("/gpx",          HTTP_GET,  [this]() { handleGpxFile(); });
     server.on("/log.txt",      HTTP_GET,  [this]() { handleLog(); });
+    server.on("/api/log",      HTTP_GET,  [this]() { handleLogLive(); });
     server.onNotFound(                    [this]() { handleNotFound(); });
 
     WiFi.mode(WIFI_OFF); // Radio wyłączone, dopóki użytkownik nie włączy hotspotu
@@ -488,4 +500,16 @@ void WifiPortal::handleLog() {
     size_t n;
     while ((n = f.read(chunk, sizeof(chunk))) > 0) server.sendContent((const char*)chunk, n);
     f.close();
+}
+
+// Podgląd logu na żywo: nowe wpisy od pozycji ?pos=, nowa pozycja w nagłówku X-Pos
+void WifiPortal::handleLogLive() {
+    uint32_t pos = server.hasArg("pos") ? (uint32_t)server.arg("pos").toInt() : 0;
+    static char out[8192];
+    size_t n = LogSerial.readSince(pos, out, sizeof(out));
+    server.sendHeader("X-Pos", String((unsigned long)pos));
+    server.sendHeader("Cache-Control", "no-store");
+    server.setContentLength(n);
+    server.send(200, "text/plain; charset=utf-8", "");
+    if (n) server.sendContent(out, n);
 }

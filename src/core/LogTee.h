@@ -15,11 +15,18 @@ public:
     void loop();                // Zapis bufora na kartę (co ~2 s albo gdy bufor się zapełni)
     bool hasSd() const { return sd; }
 
+    // Podgląd na żywo: kopiuje logi od pozycji 'pos' (licznik wszystkich bajtów), przesuwa 'pos'.
+    // Gdy 'pos' jest za stare (nadpisane), zaczyna od najstarszego dostępnego fragmentu.
+    size_t readSince(uint32_t& pos, char* out, size_t max);
+
     static const char* PATH;    // "/log.txt"
 
 private:
     static constexpr size_t BUF = 16384; // Zapas na logi sprzed zamontowania karty i między zapisami
     char     buf[BUF];
+    static constexpr size_t RING = 8192;   // Ostatnie ~8 kB logu w pamięci (działa też bez karty SD)
+    char     ring[RING];
+    uint32_t total = 0;                    // Ile bajtów logu powstało od startu
     size_t   len = 0;
     bool     sd = false;
     unsigned long lastFlushMs = 0;

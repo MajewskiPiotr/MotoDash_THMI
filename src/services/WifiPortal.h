@@ -52,5 +52,6 @@ private:
     void handleGpxList();   // Lista plików GPX z karty SD (JSON)
     void handleGpxFile();   // Pobranie jednego pliku GPX
     void handleLog();       // Log z karty SD (/log.txt)
+    void handleLogLive();   // Log na żywo (zakładka Log na stronie)
     void handleNotFound();
 };
