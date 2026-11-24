@@ -155,40 +155,45 @@ void RefuelScreen::finishCalibration(MotoState& state, bool save) {
 }
 
 // ---------------------------------------------------------------------------
-// Obsługa przycisków
+// Obsługa dotyku
 // ---------------------------------------------------------------------------
 
-bool RefuelScreen::onModeClick(MotoState& state) {
+int RefuelScreen::itemAt(int x, int y) const {
+    const TouchRect rects[ITEM_COUNT] = {
+        { MINUS_X, AMT_Y, PM_W, AMT_H },   // ITEM_MINUS
+        { PLUS_X,  AMT_Y, PM_W, AMT_H },   // ITEM_PLUS
+        { FULL_X,  BTN_Y, BTN_W, BTN_H },  // ITEM_FULL   (DO PEŁNA / ZAPISZ)
+        { ADD_X,   BTN_Y, BTN_W, BTN_H },  // ITEM_ADD    (DOLEJ / POMIŃ)
+        { CANCEL_X, BTN_Y, BTN_W, BTN_H }, // ITEM_CANCEL (ANULUJ / WSTECZ)
+    };
+    for (int i = 0; i < ITEM_COUNT; i++) if (rects[i].contains(x, y)) return i;
+    return -1;
+}
+
+bool RefuelScreen::onTap(MotoState& state, int x, int y) {
+    touchActivity();
+    if (view == VIEW_RESULT) { close(state); return true; } // Wynik kalibracji: dotyk w dowolnym miejscu zamyka
+    int item = itemAt(x, y);
+    if (item < 0) return true; // Pusty obszar - nic, ale nie zmieniamy jasności
+    if (view == VIEW_MAIN && !isItemEnabled(state, item)) return true; // Wyszarzony przycisk (bak pełny)
+    selected = item;           // Podświetlenie ostatnio wciśniętego przycisku
+    controlsDirty = true;
+    if (view == VIEW_CALIB) activateCalib(state, item);
+    else                    activate(state, item);
+    return true;
+}
+
+bool RefuelScreen::onLongTouch(MotoState& state, int x, int y) {
     touchActivity();
     if (view == VIEW_RESULT) { close(state); return true; }
-    // Następna aktywna opcja (przy pełnym baku w widoku głównym pomija -, + i DOLEJ)
-    do {
-        selected = (selected + 1) % ITEM_COUNT;
-    } while (!isItemEnabled(state, selected));
+    int item = itemAt(x, y);
+    if (item != ITEM_MINUS && item != ITEM_PLUS) return true;
+    if (view == VIEW_MAIN && !isItemEnabled(state, item)) return true;
+    int steps = item == ITEM_PLUS ? 5 : -5;
+    if (view == VIEW_CALIB) changePumped(state, steps * 2); // 1 L przy kroku 0,1 L
+    else                    changeAmount(state, steps);     // 2,5 L przy kroku 0,5 L
+    selected = item;
     controlsDirty = true;
-    return true;
-}
-
-bool RefuelScreen::onModeLongPress(MotoState& state) {
-    touchActivity();
-    if (view == VIEW_CALIB) switchView(state, VIEW_MAIN, ITEM_FULL); // Wstecz
-    else                    close(state);                            // Anuluj i wróć
-    return true;
-}
-
-bool RefuelScreen::onActionClick(MotoState& state) {
-    touchActivity();
-    if      (view == VIEW_RESULT) close(state);
-    else if (view == VIEW_CALIB)  activateCalib(state, selected);
-    else                          activate(state, selected);
-    return true; // Blokuje globalną zmianę jasności
-}
-
-bool RefuelScreen::onActionLongPress(MotoState& state) {
-    touchActivity();
-    if      (view == VIEW_RESULT) close(state);
-    else if (view == VIEW_CALIB)  activateCalib(state, ITEM_FULL); // Skrót: zapisz kalibrację
-    else                          activate(state, ITEM_FULL);      // Skrót: do pełna
     return true;
 }
 
@@ -276,7 +281,7 @@ void RefuelScreen::drawHeader(TFT_eSPI& tft, const char* title) {
     SmoothText::str(tft, title, 10, 6, 1);
     if (view != VIEW_RESULT) {
         tft.setTextColor(TEXT_MUTED, BG_COLOR);
-        SmoothText::str(tft, "[MODE]: wybór  [ACT]: OK", 310, 6, 1, SmoothText::RIGHT);
+        SmoothText::str(tft, "przytrzymaj -/+ = szybciej", 310, 6, 1, SmoothText::RIGHT);
     }
 }
 
@@ -419,7 +424,7 @@ void RefuelScreen::drawResult(TFT_eSPI& tft, const MotoState& state) {
     }
 
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    SmoothText::str(tft, "Dowolny przycisk: OK", 160, 210, 2, SmoothText::CENTER);
+    SmoothText::str(tft, "Dotknij, aby zamknąć", 160, 210, 2, SmoothText::CENTER);
 }
 
 void RefuelScreen::drawButton(TFT_eSPI& tft, int x, int y, int w, int h, const String& label,

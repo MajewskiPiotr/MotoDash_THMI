@@ -14,8 +14,9 @@ public:
     void onEnter(TFT_eSPI& tft, const MotoState& state) override;
     void update(TFT_eSPI& tft, const MotoState& state) override;
 
-    bool onModeLongPress(MotoState& state) override;   // Przytrzymanie MODE zapisuje bieżącą trasę do tabeli i zeruje licznik wycieczki
-    bool onActionLongPress(MotoState& state) override; // Przytrzymanie ACTION czyści historię tabeli
+    // Przytrzymanie przycisku "Zakończ trasę" zapisuje bieżącą trasę i zeruje licznik wycieczki,
+    // przytrzymanie "Wyczyść" czyści tabelę
+    bool onLongTouch(MotoState& state, int x, int y) override;
 
     bool hasSd() const { return sdAvailable; }         // Czy karta microSD działa (np. do pobrania CSV przez Wi-Fi)
 
@@ -25,5 +26,6 @@ private:
     bool isDirty     = true;  // Flaga wymuszająca przerysowanie tabeli tylko po zmianie danych
 
     void saveToSdCsv(const TripRecord& rec); // Dopisuje nową trasę jako wiersz w pliku /trasy.csv na karcie SD
+    void finishTrip(MotoState& state);       // Zapisuje bieżącą trasę do tabeli i zeruje licznik wycieczki
     String formatDuration(int totalMinutes); // Zamienia minuty na czytelny format "02:15"
 };

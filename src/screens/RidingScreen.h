@@ -13,8 +13,8 @@ public:
 
     void onEnter(TFT_eSPI& tft, const MotoState& state) override;
     void update(TFT_eSPI& tft, const MotoState& state) override;
-    bool onActionLongPress(MotoState& state) override; // Obsługa resetu po tankowaniu
-    bool onActionDoubleClick(MotoState& state) override; // Podwójne kliknięcie ACTION otwiera ekran Tankowania
+    bool onTap(MotoState& state, int x, int y) override;       // Karta paliwa -> ekran Tankowania
+    bool onLongTouch(MotoState& state, int x, int y) override; // Przytrzymanie karty paliwa -> szybkie "do pełna"
 
 private:
     FuelCalculator* fuelCalculator;

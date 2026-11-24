@@ -7,7 +7,7 @@
 // - sam wykrywa prędkość szyny (500 / 250 kb/s) i kierunek pinów,
 // - co ok. 0,1 s pyta o kolejny parametr: obroty, prędkość, temp. płynu, MAP, temp. powietrza, napięcie, błędy,
 // - gdy sterownik przestanie odpowiadać (zapłon wyłączony), co kilka sekund próbuje połączyć się od nowa.
-// Gdy Config::CAN_ON_GPS_PORT == false (brak modułu), działa symulacja silnika jak dotąd.
+// Moduł w złączu IO15/IO16. Gdy Config::CAN_ENABLED == false, działa symulacja silnika.
 class CanReader {
 public:
     void init();

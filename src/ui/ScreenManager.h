@@ -14,6 +14,7 @@ public:
     void render(MotoState& state);         // Zarządza częstotliwością odświeżania i rysowaniem aktywnego ekranu
     void prevScreen(MotoState& state); // Przełącza na poprzedni ekran w karuzeli (np. 2 -> 1 -> 0)
     Screen* getActiveScreen();             // Zwraca wskaźnik do aktualnie wyświetlanego ekranu
+    TFT_eSPI& display() { return tft; }    // Dostęp do ekranu (kalibracja dotyku)
 
     // Ekran-nakładka spoza karuzeli (np. Tankowanie). Zasłania aktywny ekran do czasu zamknięcia.
     void showOverlay(Screen* overlay, MotoState& state);

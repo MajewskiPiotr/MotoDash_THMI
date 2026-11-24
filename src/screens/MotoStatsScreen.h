@@ -10,8 +10,7 @@ public:
 
     void onEnter(TFT_eSPI& tft, const MotoState& state) override;
     void update(TFT_eSPI& tft, const MotoState& state) override;
-    bool onModeLongPress(MotoState& state) override;   // Reset wartości Max/Min
-    bool onActionLongPress(MotoState& state) override; // Kasowanie błędów ECU
+    bool onLongTouch(MotoState& state, int x, int y) override; // Przytrzymanie karty: zeruj rekordy / kasuj błędy
 
 private:
     CanReader* canReader;

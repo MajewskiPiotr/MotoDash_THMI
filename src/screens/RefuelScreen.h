@@ -29,10 +29,8 @@ public:
     void onEnter(TFT_eSPI& tft, const MotoState& state) override;
     void update(TFT_eSPI& tft, const MotoState& state) override;
 
-    bool onModeClick(MotoState& state) override;
-    bool onModeLongPress(MotoState& state) override;
-    bool onActionClick(MotoState& state) override;
-    bool onActionLongPress(MotoState& state) override;
+    bool onTap(MotoState& state, int x, int y) override;       // Stuknięcie w przycisk na ekranie
+    bool onLongTouch(MotoState& state, int x, int y) override; // Przytrzymanie - / + = 5 kroków
 
 private:
     // Widoki ekranu
@@ -75,6 +73,7 @@ private:
     void  switchView(MotoState& state, View v, uint8_t sel);
     void  close(MotoState& state);
     void  touchActivity() { lastActivityMs = millis(); } // Resetuje licznik bezczynności
+    int   itemAt(int x, int y) const;                    // Który przycisk jest w miejscu dotyku (-1 = żaden)
 
     void drawHeader(TFT_eSPI& tft, const char* title);
     void drawCountdown(TFT_eSPI& tft, unsigned long timeoutMs);

@@ -121,10 +121,17 @@ void TripsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
 
     // Obramowanie całej tabeli (Y: 22..206)
 
-    // Dolna legenda przycisków
+    // Dolne przyciski dotykowe (działają po przytrzymaniu, żeby nie skasować niczego przypadkiem)
+    tft.fillRoundRect(8, 208, 196, 28, 10, CARD_COLOR);
+    tft.drawRoundRect(8, 208, 196, 28, 10, ACCENT_GREEN);
+    tft.setTextColor(ACCENT_GREEN, CARD_COLOR);
+    SmoothText::str(tft, "ZAKOŃCZ TRASĘ", 106, 215, 2, SmoothText::CENTER);
+    tft.fillRoundRect(212, 208, 100, 28, 10, CARD_COLOR);
+    tft.drawRoundRect(212, 208, 100, 28, 10, TEXT_MUTED);
+    tft.setTextColor(TEXT_MUTED, CARD_COLOR);
+    SmoothText::str(tft, "WYCZYŚĆ", 262, 215, 2, SmoothText::CENTER);
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    SmoothText::str(tft, "[MODE 2s]: Zapisz trasę", 10, 218, 1);
-    SmoothText::str(tft, "[ACT 2s]: Wyczyść", 195, 218, 1);
+    SmoothText::str(tft, "przytrzymaj", 230, 6, 1, SmoothText::RIGHT);
 }
 
 // Rysuje 5 wierszy tabeli z danymi ostatnich tras (tylko gdy zaszła zmiana - zero migotania)
@@ -173,8 +180,22 @@ void TripsScreen::update(TFT_eSPI& tft, const MotoState& state) {
     }
 }
 
-// Długie przytrzymanie MODE archiwizuje bieżącą trasę do tabeli i na kartę SD
-bool TripsScreen::onModeLongPress(MotoState& state) {
+static const TouchRect BTN_FINISH = { 8, 204, 196, 36 };
+static const TouchRect BTN_CLEAR  = { 212, 204, 100, 36 };
+
+bool TripsScreen::onLongTouch(MotoState& state, int x, int y) {
+    if (BTN_FINISH.contains(x, y)) { finishTrip(state); isDirty = true; return true; }
+    if (BTN_CLEAR.contains(x, y)) {
+        state.historyCount = 0;
+        isDirty = true;
+        Serial.println("[TripsScreen] Wyczyszczono tabele historii");
+        return true;
+    }
+    return false;
+}
+
+// Archiwizuje bieżącą trasę do tabeli i na kartę SD
+void TripsScreen::finishTrip(MotoState& state) {
     // Wyliczamy przykładowy czas jazdy (np. na podstawie dystansu i średniej prędkości 65 km/h)
     float dist = (state.tripKm > 0.5f) ? state.tripKm : 42.5f; // Jeśli 0 km w teście, wpisuje próbkę 42.5 km
     int avgSpd = 65;
@@ -184,13 +205,4 @@ bool TripsScreen::onModeLongPress(MotoState& state) {
 
     // Trasa zapisana - zerujemy licznik wycieczki, żeby następna liczyła się od zera
     if (fuelCalculator) fuelCalculator->resetCurrentTrip(state);
-    return true;
-}
-
-// Długie przytrzymanie ACTION czyści podgląd tabeli na ekranie
-bool TripsScreen::onActionLongPress(MotoState& state) {
-    state.historyCount = 0;
-    isDirty = true;
-    Serial.println("[TripsScreen] Wyczyszczono tabele historii");
-    return true;
 }

@@ -18,7 +18,7 @@ static const unsigned long REPLY_WAIT_MS  = 120;   // Czekanie na odpowiedź na 
 static const unsigned long LOST_MS        = 4000;  // Bez odpowiedzi przez tyle ms = sterownik wyłączony
 
 void CanReader::init() {
-    if (!Config::CAN_ON_GPS_PORT) {
+    if (!Config::CAN_ENABLED) {
         mode = SIMULATION;
         Serial.println("[CAN] Brak modulu CAN w konfiguracji - symulacja silnika");
         return;
@@ -26,13 +26,13 @@ void CanReader::init() {
     mode = PROBING;
     combo = 0;
     nextProbeMs = 0;
-    Serial.println("[CAN] Szukam sterownika OBD-II na zlaczu IO17/IO18 (CTX=IO17, CRX=IO18)...");
+    Serial.println("[CAN] Szukam sterownika OBD-II na zlaczu IO15/IO16 (CTX=IO15, CRX=IO16)...");
 }
 
 bool CanReader::startDriver(uint8_t i) {
     stopDriver();
-    gpio_num_t tx = (gpio_num_t)(COMBOS[i].swapped ? Config::PIN_GPS_B : Config::PIN_GPS_A);
-    gpio_num_t rx = (gpio_num_t)(COMBOS[i].swapped ? Config::PIN_GPS_A : Config::PIN_GPS_B);
+    gpio_num_t tx = (gpio_num_t)(COMBOS[i].swapped ? Config::PIN_CAN_B : Config::PIN_CAN_A);
+    gpio_num_t rx = (gpio_num_t)(COMBOS[i].swapped ? Config::PIN_CAN_A : Config::PIN_CAN_B);
     twai_general_config_t g = TWAI_GENERAL_CONFIG_DEFAULT(tx, rx, TWAI_MODE_NORMAL);
     g.rx_queue_len = 32;
     twai_timing_config_t t = COMBOS[i].kbps == 500 ? (twai_timing_config_t)TWAI_TIMING_CONFIG_500KBITS()
@@ -112,8 +112,8 @@ void CanReader::update(MotoState& s) {
             memset(misses, 0, sizeof(misses));
             memset(unsupported, 0, sizeof(unsupported));
             Serial.printf("[CAN] Polaczono ze sterownikiem: %lu kb/s, CTX=IO%d, CRX=IO%d\n", (unsigned long)COMBOS[combo].kbps,
-                          COMBOS[combo].swapped ? Config::PIN_GPS_B : Config::PIN_GPS_A,
-                          COMBOS[combo].swapped ? Config::PIN_GPS_A : Config::PIN_GPS_B);
+                          COMBOS[combo].swapped ? Config::PIN_CAN_B : Config::PIN_CAN_A,
+                          COMBOS[combo].swapped ? Config::PIN_CAN_A : Config::PIN_CAN_B);
             return;
         }
         if (now - probeSentMs > PROBE_WAIT_MS) {

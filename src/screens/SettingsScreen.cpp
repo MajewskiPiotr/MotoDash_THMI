@@ -2,6 +2,7 @@
 #include "Theme.h"
 #include "SmoothText.h"
 #include "Icons.h" // Wspólna paleta kolorów
+#include "TouchHandler.h"
 #include <Preferences.h> // Wbudowana biblioteka ESP32 do obsługi nieulotnej pamięci Flash (NVS)
 
 
@@ -35,141 +36,120 @@ void SettingsScreen::saveToNvs(const MotoState& state) {
     }
 }
 
-// Rysuje statyczne tło, nagłówek oraz dolną instrukcję przycisków (raz przy wejściu do menu)
-void SettingsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
-    isDirty = true; // Wymusza narysowanie wszystkich wierszy przy pierwszym wywołaniu update()
-    tft.fillScreen(BG_COLOR);
+// --- UKŁAD (dotyk) ---
+// Wiersze parametrów: stuknięcie zaznacza wiersz. Na dole duże przyciski: [-] [+] [GOTOWE].
+static constexpr int ROW_Y0 = 24, ROW_H = 24, ROW_STEP = 26;
+static const TouchRect BTN_MINUS = { 8,   184, 96, 52 };
+static const TouchRect BTN_PLUS  = { 112, 184, 96, 52 };
+static const TouchRect BTN_DONE  = { 216, 184, 96, 52 };
 
+void SettingsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
+    isDirty = true;
+    tft.fillScreen(BG_COLOR);
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
     SmoothText::str(tft, "USTAWIENIA", 10, 6, 1);
-
-    // Dolna legenda podpowiadająca działanie przycisków w menu
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    SmoothText::str(tft, "[MODE]: wybór   [ACT]: +   [ACT 2s]: -", 10, 218, 1);
+    SmoothText::str(tft, "stuknij wiersz", 230, 6, 1, SmoothText::RIGHT);
 }
 
-// Rysuje listę 6 wierszy z aktualnymi wartościami
-void SettingsScreen::update(TFT_eSPI& tft, const MotoState& state) {
-    // Rysujemy listę TYLKO wtedy, gdy użytkownik zmienił wiersz lub wartość (eliminuje migotanie)
-    if (!isDirty) return;
-    isDirty = false; // Resetuje flagę po narysowaniu aktualnego stanu
+static void drawBtn(TFT_eSPI& tft, const TouchRect& r, const char* txt, uint16_t accent, uint8_t font) {
+    tft.fillRoundRect(r.x, r.y, r.w, r.h, CARD_RADIUS, CARD_COLOR);
+    tft.drawRoundRect(r.x, r.y, r.w, r.h, CARD_RADIUS, accent);
+    tft.setTextColor(accent, CARD_COLOR);
+    int fh = SmoothText::height(tft, font);
+    SmoothText::str(tft, txt, r.x + r.w / 2, r.y + (r.h - fh) / 2, font, SmoothText::CENTER);
+}
 
-    // Etykiety wyświetlanych parametrów
+// Rysuje listę parametrów i dolne przyciski (tylko po zmianie)
+void SettingsScreen::update(TFT_eSPI& tft, const MotoState& state) {
+    if (!isDirty) return;
+    isDirty = false;
+
     const char* labels[TOTAL_ROWS] = {
         "Kalibracja spalania:",
         "Pojemność baku:",
         "Alarm TPMS przód:",
         "Alarm TPMS tył:",
         "Wysokość startowa:",
-        "ZAPISZ I WYJDŹ"
+        "Kalibracja dotyku"
     };
-
-    // Aktualne wartości sformatowane jako tekst
     String values[TOTAL_ROWS] = {
         String(state.fuelCalFactor, 2),
         String(state.tankCapacityL, 1) + " L",
         String(state.minFrontBar, 1) + " bar",
         String(state.minRearBar, 1) + " bar",
         String(state.baseAltitudeM) + " m",
-        "[OK]"
+        "stuknij"
     };
 
-    // Pętla rysująca każdy z 6 wierszy listy
     for (uint8_t i = 0; i < TOTAL_ROWS; i++) {
-        int y = 28 + (i * 29); // Wylicza pozycję pionową (Y) kolejnego wiersza
-        bool isSelected = (i == selectedRow);
+        int y = ROW_Y0 + i * ROW_STEP;
+        bool sel = (i == selectedRow);
+        uint16_t rowBg = sel ? HIGHLIGHT_BG : CARD_COLOR;
+        tft.fillRoundRect(8, y, 304, ROW_H, 8, rowBg);
 
-        // Podświetla aktywny wiersz kolorem HIGHLIGHT_BG
-        uint16_t rowBg = isSelected ? HIGHLIGHT_BG : CARD_COLOR;
-        tft.fillRoundRect(8, y, 304, 25, 8, rowBg);
-
-        // Ikona pozycji
-        uint16_t ic = isSelected ? TFT_WHITE : TEXT_MUTED;
+        uint16_t ic = sel ? TFT_WHITE : TEXT_MUTED;
         switch (i) {
-            case 0: Icons::droplet(tft, 14, y + 2, isSelected ? TFT_WHITE : ACCENT_BLUE); break;
-            case 1: Icons::fuelPump(tft, 14, y + 3, isSelected ? TFT_WHITE : ACCENT_YELLOW, rowBg); break;
-            case 2: case 3: Icons::tire(tft, 14, y + 2, ic, rowBg); break;
-            case 4: Icons::mountain(tft, 14, y + 2, ic, rowBg); break;
-            case 5: Icons::check(tft, 14, y + 2, ACCENT_GREEN); break;
+            case 0: Icons::droplet(tft, 14, y + 2, sel ? TFT_WHITE : ACCENT_BLUE); break;
+            case 1: Icons::fuelPump(tft, 14, y + 2, sel ? TFT_WHITE : ACCENT_YELLOW, rowBg); break;
+            case 2: case 3: Icons::tire(tft, 14, y + 1, ic, rowBg); break;
+            case 4: Icons::mountain(tft, 14, y + 1, ic, rowBg); break;
+            case 5: Icons::check(tft, 14, y + 1, ACCENT_GREEN); break;
         }
-
-        // Nazwa parametru (zaznaczona pozycja: jasny tekst na niebieskim tle)
-        tft.setTextColor(isSelected ? TFT_WHITE : TEXT_MUTED, rowBg);
-        SmoothText::str(tft, labels[i], 42, y + 5, 2);
-
-        // Rysuje wartość parametru wyrównaną do prawej krawędzi
-        tft.setTextColor(isSelected ? ACCENT_GREEN : TFT_WHITE, rowBg);
-        SmoothText::str(tft, values[i], 300, y + 5, 2, SmoothText::RIGHT);
+        tft.setTextColor(sel ? TFT_WHITE : TEXT_MUTED, rowBg);
+        SmoothText::str(tft, labels[i], 42, y + 4, 2);
+        tft.setTextColor(sel ? ACCENT_GREEN : TFT_WHITE, rowBg);
+        SmoothText::str(tft, values[i], 300, y + 4, 2, SmoothText::RIGHT);
     }
+
+    bool adjustable = selectedRow < ROW_TOUCH_CAL;
+    drawBtn(tft, BTN_MINUS, "-", adjustable ? TFT_WHITE : BORDER_COLOR, 4);
+    drawBtn(tft, BTN_PLUS,  "+", adjustable ? TFT_WHITE : BORDER_COLOR, 4);
+    drawBtn(tft, BTN_DONE,  "GOTOWE", ACCENT_GREEN, 2);
 }
 
-// Krótkie kliknięcie MODE przesuwa kursor na kolejny wiersz w menu
-bool SettingsScreen::onModeClick(MotoState& state) {
-    selectedRow = (selectedRow + 1) % TOTAL_ROWS; // Przechodzi cyklicznie 0 -> 1 -> ... -> 5 -> 0
-    isDirty = true;                               // Oznacza menu do przerysowania
-    return true;                                  // Blokuje przełączenie na inny ekran przez ScreenManager
-}
-
-// Długie przytrzymanie MODE zapisuje ustawienia i wraca do Ekranu 1 (Tryb Jazdy)
-bool SettingsScreen::onModeLongPress(MotoState& state) {
+// Zmienia wartość zaznaczonego wiersza o 'steps' kroków (ujemne = w dół) i od razu zapisuje
+void SettingsScreen::changeValue(MotoState& state, int steps) {
+    switch (selectedRow) {
+        case 0: state.fuelCalFactor = constrain(state.fuelCalFactor + 0.02f * steps, 0.70f, 1.30f); break;
+        case 1: state.tankCapacityL = constrain(state.tankCapacityL + 0.5f * steps, 10.0f, 30.0f); break;
+        case 2: state.minFrontBar   = constrain(state.minFrontBar + 0.1f * steps, 1.5f, 2.8f); break;
+        case 3: state.minRearBar    = constrain(state.minRearBar + 0.1f * steps, 1.5f, 3.2f); break;
+        case 4: state.baseAltitudeM = constrain(state.baseAltitudeM + 20 * steps, 0, 2500); break;
+        default: return;
+    }
     saveToNvs(state);
-    selectedRow = 0;
-    if (screenManager) screenManager->goToFirstScreen(state);
-    return true;
+    isDirty = true;
 }
 
-// Krótkie kliknięcie ACTION zwiększa wybraną wartość (+) lub zatwierdza wyjście
-bool SettingsScreen::onActionClick(MotoState& state) {
-    switch (selectedRow) {
-        case 0: // Kalibracja spalania (krok co 0.02 w zakresie 0.70 .. 1.30, jak przy automatycznej kalibracji)
-            state.fuelCalFactor += 0.02f;
-            if (state.fuelCalFactor > 1.30f) state.fuelCalFactor = 0.70f;
-            break;
-        case 1: // Pojemność baku (krok co 0.5 L w zakresie 10.0 .. 30.0 L)
-            state.tankCapacityL += 0.5f;
-            if (state.tankCapacityL > 30.0f) state.tankCapacityL = 10.0f;
-            break;
-        case 2: // Próg alarmu przedniej opony (krok co 0.1 bar w zakresie 1.5 .. 2.8 bar)
-            state.minFrontBar += 0.1f;
-            if (state.minFrontBar > 2.8f) state.minFrontBar = 1.5f;
-            break;
-        case 3: // Próg alarmu tylnej opony (krok co 0.1 bar w zakresie 1.5 .. 3.2 bar)
-            state.minRearBar += 0.1f;
-            if (state.minRearBar > 3.2f) state.minRearBar = 1.5f;
-            break;
-        case 4: // Wysokość bazowa do kalibracji barometru (krok co 20 m w zakresie 0 .. 2500 m)
-            state.baseAltitudeM += 20;
-            if (state.baseAltitudeM > 2500) state.baseAltitudeM = 0;
-            break;
-        case 5: // Ostatnia pozycja: "ZAPISZ I WYJDŹ"
-            saveToNvs(state);
-            selectedRow = 0;
-            if (screenManager) screenManager->goToFirstScreen(state);
+bool SettingsScreen::onTap(MotoState& state, int x, int y) {
+    // Wiersz listy
+    if (y >= ROW_Y0 && y < ROW_Y0 + TOTAL_ROWS * ROW_STEP && x >= 8 && x < 312) {
+        uint8_t row = (y - ROW_Y0) / ROW_STEP;
+        if (row == ROW_TOUCH_CAL) {
+            if (touch && screenManager) {
+                touch->calibrate(screenManager->display());
+                state.forceRedraw = true; // Kalibracja zamalowała ekran
+            }
             return true;
+        }
+        selectedRow = row;
+        isDirty = true;
+        return true;
     }
-    isDirty = true; // Wymusza przerysowanie listy ze zaktualizowaną wartością
-    return true;    // Blokuje globalną zmianę jasności ekranu
+    if (BTN_MINUS.contains(x, y)) { changeValue(state, -1); return true; }
+    if (BTN_PLUS.contains(x, y))  { changeValue(state, +1); return true; }
+    if (BTN_DONE.contains(x, y)) {
+        saveToNvs(state);
+        if (screenManager) screenManager->goToFirstScreen(state);
+        return true;
+    }
+    return false;
 }
 
-// Długie przytrzymanie ACTION zmniejsza wybraną wartość (-)
-bool SettingsScreen::onActionLongPress(MotoState& state) {
-    switch (selectedRow) {
-        case 0:
-            state.fuelCalFactor = max(0.70f, state.fuelCalFactor - 0.02f);
-            break;
-        case 1:
-            state.tankCapacityL = max(10.0f, state.tankCapacityL - 0.5f);
-            break;
-        case 2:
-            state.minFrontBar = max(1.5f, state.minFrontBar - 0.1f);
-            break;
-        case 3:
-            state.minRearBar = max(1.5f, state.minRearBar - 0.1f);
-            break;
-        case 4:
-            state.baseAltitudeM = max(0, state.baseAltitudeM - 20);
-            break;
-    }
-    isDirty = true; // Wymusza przerysowanie listy ze zmniejszoną wartością
-    return true;
+// Przytrzymanie - lub + zmienia wartość o 5 kroków naraz
+bool SettingsScreen::onLongTouch(MotoState& state, int x, int y) {
+    if (BTN_MINUS.contains(x, y)) { changeValue(state, -5); return true; }
+    if (BTN_PLUS.contains(x, y))  { changeValue(state, +5); return true; }
+    return false;
 }

@@ -2,10 +2,21 @@
 #include <TFT_eSPI.h>
 #include "MotoState.h"
 
-// Abstrakcyjna klasa bazowa (odpowiednik interfejsu w Javie) dla każdego ekranu w aplikacji.
+// Prostokątny obszar dotyku na ekranie (np. narysowany przycisk)
+struct TouchRect {
+    int x, y, w, h;
+    bool contains(int px, int py) const { return px >= x && px < x + w && py >= y && py < y + h; }
+};
+
+// Abstrakcyjna klasa bazowa dla każdego ekranu w aplikacji.
+// Sterowanie dotykiem (TouchHandler):
+//  - przesunięcie palcem w lewo / w prawo  -> następny / poprzedni ekran (robi to ScreenManager),
+//  - stuknięcie                             -> onTap(x, y),
+//  - przytrzymanie ~0,8 s                   -> onLongTouch(x, y) (akcje, których nie chcemy wywołać przypadkiem).
+// Metody zwracają true, jeśli ekran obsłużył dotyk w tym miejscu.
 class Screen {
 public:
-    virtual ~Screen() = default; // Wirtualny destruktor wymagany przy dziedziczeniu w C++
+    virtual ~Screen() = default;
 
     // Wywoływana RAZ w momencie przełączenia na ten ekran (rysuje statyczne ramki i napisy)
     virtual void onEnter(TFT_eSPI& tft, const MotoState& state) = 0;
@@ -13,14 +24,6 @@ public:
     // Wywoływana cyklicznie w pętli głównej (odświeża wyłącznie zmieniające się wartości)
     virtual void update(TFT_eSPI& tft, const MotoState& state) = 0;
 
-    // Opcjonalne metody obsługujące kliknięcia/przytrzymania na konkretnym ekranie.
-    // Zwracają 'true', jeśli ekran sam obsłużył przycisk (blokując domyślną akcję globalną).
-    virtual bool onModeClick(MotoState& state)       { return false; }
-    virtual bool onModeLongPress(MotoState& state)   { return false; }
-    virtual bool onActionClick(MotoState& state)     { return false; }
-    virtual bool onActionLongPress(MotoState& state) { return false; }
-
-    // Podwójne kliknięcie ACTION. Jeśli ekran go nie obsłuży (false), ButtonHandler
-    // traktuje je jak dwa zwykłe kliknięcia ACTION (np. dwa razy "+" w menu).
-    virtual bool onActionDoubleClick(MotoState& state) { return false; }
+    virtual bool onTap(MotoState& state, int x, int y)       { return false; }
+    virtual bool onLongTouch(MotoState& state, int x, int y) { return false; }
 };

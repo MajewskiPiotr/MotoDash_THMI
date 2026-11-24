@@ -2,6 +2,8 @@
 #include "Screen.h"
 #include "ScreenManager.h"
 
+class TouchHandler;
+
 // Ekran 4: Menu konfiguracji z trwałym zapisem ustawień do nieulotnej pamięci Flash (Preferences).
 class SettingsScreen : public Screen {
 public:
@@ -14,14 +16,18 @@ public:
     void update(TFT_eSPI& tft, const MotoState& state) override;
 
     // Nadpisujemy zachowanie przycisków, aby wewnątrz menu służyły do nawigacji i edycji wartości
-    bool onModeClick(MotoState& state) override;       // Przesuwa kursor na kolejną opcję w dół
-    bool onModeLongPress(MotoState& state) override;   // Zapisuje zmiany i wychodzi do ekranu jazdy
-    bool onActionClick(MotoState& state) override;     // Zwiększa wybraną wartość (+) lub zatwierdza wyjście
-    bool onActionLongPress(MotoState& state) override; // Zmniejsza wybraną wartość (-)
+    bool onTap(MotoState& state, int x, int y) override;       // Wiersz = wybór, [-]/[+] = zmiana, GOTOWE = wyjście
+    bool onLongTouch(MotoState& state, int x, int y) override; // Przytrzymanie [-]/[+] = 5 kroków
+
+    void setTouchHandler(TouchHandler* t) { touch = t; } // Do kalibracji dotyku z menu
 
 private:
     ScreenManager* screenManager;
+    TouchHandler*  touch = nullptr;
     uint8_t selectedRow = 0;                 // Aktualnie podświetlony wiersz menu (0..5)
     bool isDirty = true;                     // Flaga "brudnego ekranu" - rysuje listę tylko po kliknięciu guzika
     static constexpr uint8_t TOTAL_ROWS = 6; // Łączna liczba pozycji w menu konfiguracji
+    static constexpr uint8_t ROW_TOUCH_CAL = 5; // Ostatni wiersz: kalibracja dotyku (bez wartości)
+
+    void changeValue(MotoState& state, int steps);
 };

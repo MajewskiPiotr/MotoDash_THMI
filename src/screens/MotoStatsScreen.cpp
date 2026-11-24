@@ -45,11 +45,11 @@ void MotoStatsScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     card(tft, 164, 118, "Błędy silnika");
     Icons::warning(tft, 172, 126, ACCENT_YELLOW, CARD_COLOR);
 
-    // Podpowiedzi przycisków jako zaokrąglone "chipy"
+    // Podpowiedzi dotyku jako zaokrąglone "chipy"
     tft.fillRoundRect(8, 214, 148, 22, 11, CHIP_COLOR);
-    label(tft, "MODE 2 s - zeruj rekordy", 20, 218, 124, CENTER, CHIP_COLOR);
+    label(tft, "przytrzymaj rekord - zeruj", 14, 218, 136, CENTER, CHIP_COLOR);
     tft.fillRoundRect(164, 214, 148, 22, 11, CHIP_COLOR);
-    label(tft, "ACTION 2 s - kasuj błędy", 176, 218, 124, CENTER, CHIP_COLOR);
+    label(tft, "przytrzymaj - kasuj błędy", 170, 218, 136, CENTER, CHIP_COLOR);
 }
 
 // Odświeża wartości (każda rysuje się tylko po zmianie)
@@ -70,18 +70,12 @@ void MotoStatsScreen::update(TFT_eSPI& tft, const MotoState& state) {
                   TEXT_MUTED, CARD_COLOR);
 }
 
-bool MotoStatsScreen::onModeLongPress(MotoState& state) {
-    if (canReader) {
-        canReader->resetStats(state);
-        state.forceRedraw = true;
-    }
-    return true;
-}
-
-bool MotoStatsScreen::onActionLongPress(MotoState& state) {
-    if (canReader) {
-        canReader->clearDtcCodes(state);
-        state.forceRedraw = true;
-    }
+// Przytrzymanie karty "Błędy silnika" (prawa dolna, także jej chip) kasuje błędy w sterowniku,
+// przytrzymanie którejkolwiek karty z rekordami (lub lewego chipa) zeruje rekordy.
+bool MotoStatsScreen::onLongTouch(MotoState& state, int x, int y) {
+    if (!canReader || y < 22) return false;
+    if (x >= 160 && y >= 114) canReader->clearDtcCodes(state);
+    else                      canReader->resetStats(state);
+    state.forceRedraw = true;
     return true;
 }

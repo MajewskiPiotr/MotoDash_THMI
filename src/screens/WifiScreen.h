@@ -10,7 +10,7 @@ public:
 
     void onEnter(TFT_eSPI& tft, const MotoState& state) override;
     void update(TFT_eSPI& tft, const MotoState& state) override;
-    bool onActionClick(MotoState& state) override; // Włącz / wyłącz hotspot
+    bool onTap(MotoState& state, int x, int y) override; // Stuknięcie w kartę: włącz / wyłącz hotspot
 
 private:
     WifiPortal* portal;

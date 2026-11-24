@@ -161,16 +161,19 @@ void RidingScreen::drawTire(TFT_eSPI& tft, int idx, bool ok, float bar, int temp
     }
 }
 
-// Długie przytrzymanie przycisku ACTION na ekranie jazdy resetuje paliwo po tankowaniu
-bool RidingScreen::onActionLongPress(MotoState& state) {
-    // Szybkie "do pełna" bez pytania o litry - trafia do historii tankowań jako bak bez pomiaru
-    if (refuelScreen) refuelScreen->fullWithoutPump(state);
+// Karta paliwa i zasięgu (środkowy rząd po prawej)
+static const TouchRect FUEL_CARD = { 162, 112, 150, 78 };
+
+// Stuknięcie w kartę paliwa otwiera ekran Tankowania (stan baku, do pełna / dolej X litrów)
+bool RidingScreen::onTap(MotoState& state, int x, int y) {
+    if (!refuelScreen || !FUEL_CARD.contains(x, y)) return false;
+    refuelScreen->open(state);
     return true;
 }
 
-// Podwójne kliknięcie ACTION na ekranie jazdy otwiera ekran Tankowania (stan baku, do pełna / dolej X litrów)
-bool RidingScreen::onActionDoubleClick(MotoState& state) {
-    if (!refuelScreen) return false;
-    refuelScreen->open(state);
+// Przytrzymanie karty paliwa: szybkie "do pełna" bez pytania o litry (w historii jako bak bez pomiaru)
+bool RidingScreen::onLongTouch(MotoState& state, int x, int y) {
+    if (!refuelScreen || !FUEL_CARD.contains(x, y)) return false;
+    refuelScreen->fullWithoutPump(state);
     return true;
 }

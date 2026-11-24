@@ -13,7 +13,7 @@ void WifiScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
     SmoothText::str(tft, "WI-FI", 10, 6, 1);
     tft.setTextColor(TEXT_MUTED, BG_COLOR);
-    SmoothText::str(tft, "[ACT]: włącz / wyłącz hotspot", 10, 218, 1);
+    SmoothText::str(tft, "Dotknij karty: włącz / wyłącz hotspot", 160, 218, 1, SmoothText::CENTER);
 }
 
 void WifiScreen::update(TFT_eSPI& tft, const MotoState& state) {
@@ -53,7 +53,7 @@ void WifiScreen::update(TFT_eSPI& tft, const MotoState& state) {
                                          : "Czekam na połączenie telefonu...", 160, 178, 2, SmoothText::CENTER);
     } else {
         tft.setTextColor(TEXT_MUTED, CARD_COLOR);
-        SmoothText::str(tft, "Kliknij ACTION, aby włączyć.", 160, 100, 2, SmoothText::CENTER);
+        SmoothText::str(tft, "Dotknij, aby włączyć.", 160, 100, 2, SmoothText::CENTER);
         SmoothText::str(tft, "Potem połącz telefon z siecią", 160, 126, 2, SmoothText::CENTER);
         SmoothText::str(tft, String("\"") + Config::WIFI_AP_SSID + "\" i otwórz stronę.", 160, 146, 2, SmoothText::CENTER);
         if (portal->wasStoppedByRiding()) {
@@ -63,8 +63,9 @@ void WifiScreen::update(TFT_eSPI& tft, const MotoState& state) {
     }
 }
 
-bool WifiScreen::onActionClick(MotoState& state) {
+bool WifiScreen::onTap(MotoState& state, int x, int y) {
+    if (y < CARD_Y || y > CARD_Y + CARD_H) return false; // Górny pasek zostaje do zmiany jasności
     if (portal) portal->toggle();
     dirty = true;
-    return true; // Blokuje globalną zmianę jasności
+    return true;
 }

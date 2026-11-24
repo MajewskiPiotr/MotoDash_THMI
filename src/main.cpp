@@ -5,7 +5,6 @@
 #include "EnvSensor.h"
 #include "TpmsScanner.h"
 #include "FuelCalculator.h"
-#include "ButtonHandler.h"
 #include "ScreenManager.h"
 #include "RidingScreen.h"
 #include "MotoStatsScreen.h"
@@ -27,7 +26,6 @@ TpmsScanner     tpmsScanner;
 GpsService      gpsService;
 TrackLogger     trackLogger;   // Zapis trasy GPX na kartę SD
 FuelCalculator  fuelCalculator;
-ButtonHandler   buttonHandler;
 ScreenManager   screenManager;
 TouchHandler    touchHandler;
 
@@ -55,6 +53,12 @@ void setup() {
     // (Odbywa się zanim zarejestrujemy i wyrenderujemy ekrany jazdy)
     screenManager.playBootAnimation();
 
+    // Kalibracja dotyku: przy pierwszym uruchomieniu albo gdy trzymasz palec na ekranie podczas startu
+    if (!touchHandler.isCalibrated() || touchHandler.isTouchedNow()) {
+        touchHandler.calibrate(screenManager.display());
+    }
+    settingsScreen.setTouchHandler(&touchHandler);
+
     // 3. Rejestracja widoków w kolejności przełączania
     screenManager.registerScreen(&ridingScreen);
     screenManager.registerScreen(&motoStatsScreen);
@@ -65,10 +69,9 @@ void setup() {
     // 4. Uruchomienie poszczególnych modułów sprzętowych i logiki
     canReader.init();
     envSensor.init();
-    if (!Config::CAN_ON_GPS_PORT) gpsService.init(); // Złącze IO17/IO18: GPS albo (test) moduł CAN
+    gpsService.init();
     tpmsScanner.init();
     fuelCalculator.init(motoState);
-    buttonHandler.init(&motoState, &screenManager);
     tripsScreen.initSdAndLoad(motoState);
     refuelLog.init(fuelCalculator.odometerKm());
     refuelLog.setSdAvailable(tripsScreen.hasSd());
@@ -83,13 +86,12 @@ void setup() {
 }
 
 void loop() {
-    // 1. Obsługa przycisków i dotyku
-    buttonHandler.tick();
+    // 1. Obsługa dotyku (jedyne sterowanie - złącze po przyciskach zajmuje moduł CAN)
     touchHandler.update(motoState, screenManager);
 
     // 2. Zbieranie aktualnych odczytów z motocykla i czujników
     canReader.update(motoState);
-    if (!Config::CAN_ON_GPS_PORT) gpsService.update(motoState);
+    gpsService.update(motoState);
     envSensor.update(motoState);
     tpmsScanner.update(motoState);
 

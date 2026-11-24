@@ -17,13 +17,13 @@ namespace Config {
     // true = karta, której nie da się odczytać (exFAT/NTFS), zostanie sformatowana na FAT32 - tylko raz na tym
     // urządzeniu (znacznik "sdFmtDone" w pamięci Flash). Kasuje całą zawartość karty!
     constexpr bool    SD_FORMAT_ONCE   = true;
-    constexpr uint8_t PIN_BTN_MODE     = 15; // Niebieski przycisk nawigacji (GPIO 15)
-    constexpr uint8_t PIN_BTN_ACTION   = 16; // Czerwony przycisk akcji (GPIO 16)
+    // Złącze Grove IO15/IO16: moduł CAN (SN65HVD230). Sterowanie MotoDash jest dotykowe - bez przycisków.
+    constexpr uint8_t PIN_CAN_A        = 15; // CTX modułu CAN (kierunek pinów wykrywa się sam)
+    constexpr uint8_t PIN_CAN_B        = 16; // CRX modułu CAN
     constexpr uint8_t PIN_GPS_A        = 17; // Złącze Grove GPS (UART) - który pin nadaje, wykrywa się samo
     constexpr uint8_t PIN_GPS_B        = 18;
-    // TEST CAN: true = w złączu IO17/IO18 zamiast GPS jest moduł CAN (SN65HVD230: CTX->IO17, CRX->IO18).
-    // GPS jest wtedy wyłączony. false = GPS w złączu, dane silnika z symulacji.
-    constexpr bool    CAN_ON_GPS_PORT  = false;
+    // true = moduł CAN podłączony (odczyt OBD-II), false = symulacja silnika (testy bez motocykla/auta)
+    constexpr bool    CAN_ENABLED      = true;
 
     // --- EKRAN TANKOWANIA ---
     constexpr float         REFUEL_PROMPT_L   = 3.0f;  // Poniżej tej ilości paliwa [L] ekran Tankowania otwiera się sam po starcie
