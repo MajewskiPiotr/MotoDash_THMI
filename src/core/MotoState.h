@@ -42,6 +42,19 @@ struct MotoState {
     float altitudeM       = 120.0f;// Aktualna wysokość n.p.m. z barometru [m]
     float pressureHpa     = 0.0f;  // Ciśnienie atmosferyczne z BME280 [hPa]
     bool  baroOk          = false; // Czy jest aktualny odczyt z barometru
+    bool  altValid        = false; // Czy wysokość pochodzi z czujnika (barometr lub GPS), a nie z wartości domyślnej
+
+    // --- GPS (GROVE UART IO17/IO18) ---
+    uint8_t  gpsStatus    = 0;     // 0 = brak modułu, 1 = szukam satelitów, 2 = pozycja ustalona
+    uint8_t  gpsSats      = 0;     // Liczba satelitów użytych do pozycji
+    double   gpsLat       = 0.0;   // Szerokość geograficzna [stopnie]
+    double   gpsLon       = 0.0;   // Długość geograficzna [stopnie]
+    float    gpsSpeedKmh  = 0.0f;  // Prędkość z GPS [km/h]
+    float    gpsCourse    = 0.0f;  // Kurs [stopnie]
+    float    gpsAltM      = 0.0f;  // Wysokość z GPS [m n.p.m.]
+    float    gpsHdop      = 99.0f; // Dokładność pozycji (im mniej, tym lepiej; < 2 = dobra)
+    uint32_t gpsFixCount  = 0;     // Licznik odebranych pozycji (do wykrywania nowej pozycji)
+    uint8_t  trackStatus  = 0;     // Zapis trasy: 0 = nie trwa, 1 = zapisuje, 2 = brak karty SD
 
     // --- DANE Z OPON (BLUETOOTH BLE TPMS) ---
     // Wartości mają sens tylko, gdy *TpmsOk == true (świeży odczyt z czujnika)

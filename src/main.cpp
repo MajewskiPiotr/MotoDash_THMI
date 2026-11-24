@@ -16,12 +16,16 @@
 #include "WifiPortal.h"
 #include "RefuelLog.h"
 #include "WifiScreen.h"
+#include "GpsService.h"
+#include "TrackLogger.h"
 
 // --- INSTANCJE GLOBALNE SERWISÓW I MODELU STANU ---
 MotoState       motoState;
 CanReader       canReader;
 EnvSensor       envSensor;
 TpmsScanner     tpmsScanner;
+GpsService      gpsService;
+TrackLogger     trackLogger;   // Zapis trasy GPX na kartę SD
 FuelCalculator  fuelCalculator;
 ButtonHandler   buttonHandler;
 ScreenManager   screenManager;
@@ -61,13 +65,16 @@ void setup() {
     // 4. Uruchomienie poszczególnych modułów sprzętowych i logiki
     canReader.init();
     envSensor.init();
+    gpsService.init();
     tpmsScanner.init();
     fuelCalculator.init(motoState);
     buttonHandler.init(&motoState, &screenManager);
     tripsScreen.initSdAndLoad(motoState);
     refuelLog.init(fuelCalculator.odometerKm());
     refuelLog.setSdAvailable(tripsScreen.hasSd());
-    wifiPortal.init(&motoState, &settingsScreen, &tripsScreen, &refuelLog, &fuelCalculator); // Hotspot startuje dopiero z ekranu Wi-Fi
+    trackLogger.init(tripsScreen.hasSd());
+    refuelLog.setTrackLogger(&trackLogger);
+    wifiPortal.init(&motoState, &settingsScreen, &tripsScreen, &refuelLog, &fuelCalculator, &trackLogger); // Hotspot startuje dopiero z ekranu Wi-Fi
 
     // 5. Prawie pusty bak po uruchomieniu = prawdopodobnie jesteśmy na stacji -> pokaż ekran Tankowania
     if (motoState.fuelInTankL < Config::REFUEL_PROMPT_L) {
@@ -82,11 +89,15 @@ void loop() {
 
     // 2. Zbieranie aktualnych odczytów z motocykla i czujników
     canReader.update(motoState);
+    gpsService.update(motoState);
     envSensor.update(motoState);
     tpmsScanner.update(motoState);
 
     // 3. Przeliczenie spalania i zasięgu na podstawie nowych odczytów
     fuelCalculator.update(motoState);
+
+    // 3a. Zapis trasy GPX (gdy jest pozycja GPS i karta SD)
+    trackLogger.update(motoState);
 
     // 4. Obsługa strony WWW, gdy hotspot jest włączony
     wifiPortal.update();

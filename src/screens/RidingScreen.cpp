@@ -3,6 +3,7 @@
 #include "Icons.h"
 #include "Fonts.h"
 #include "Config.h"
+#include <time.h>
 
 using SmoothText::LEFT;
 using SmoothText::CENTER;
@@ -26,7 +27,7 @@ static void label(TFT_eSPI& tft, const char* txt, int x, int y, int w,
 void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
     lastTempBarW = -1; lastFuelSegs = -1; lastFuelCol = 0;
     lastTireState[0] = lastTireState[1] = -1;
-    fTemp.reset(); fAlt.reset(); fInst.reset(); fAvg.reset(); fVolt.reset(); fAmb.reset(); fFuel.reset(); fRange.reset();
+    fClock.reset(); fGps.reset(); fSd.reset(); fTemp.reset(); fAlt.reset(); fInst.reset(); fAvg.reset(); fVolt.reset(); fAmb.reset(); fFuel.reset(); fRange.reset();
     for (int i = 0; i < 2; i++) { fTireBar[i].reset(); fTireTemp[i].reset(); }
 
     tft.fillScreen(BG);
@@ -58,12 +59,15 @@ void RidingScreen::onEnter(TFT_eSPI& tft, const MotoState& state) {
 
 // Odświeża wartości (co ~150 ms) - każde pole rysuje się tylko po zmianie
 void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
+    // 0. Pasek górny: stan GPS, godzina (z GPS albo z telefonu), ostrzeżenie o braku karty SD
+    drawTopBar(tft, state);
+
     // 1. Silnik: liczba ze znakiem stopnia + pasek zakresu 40..120 C
     uint16_t tCol = (state.engineTempC > Config::ENGINE_TEMP_WARN) ? ACCENT_RED : TFT_WHITE;
     fTemp.show(tft, FontNumL, String(state.engineTempC) + "\xC2\xB0", 8, 60, 72, 26, CENTER, tCol, CARD);
 
-    // Wysokość n.p.m. z barometru BME280 ("-" gdy brak czujnika)
-    if (state.baroOk)
+    // Wysokość n.p.m. z barometru BME280 i/lub GPS ("-" gdy brak obu)
+    if (state.altValid)
         fAlt.show(tft, FontNumL, String((int)roundf(state.altitudeM)), 86, 60, 72, 26, CENTER, TFT_WHITE, CARD);
     else
         fAlt.show(tft, FontNumL, "-", 86, 60, 72, 26, CENTER, TEXT_MUTED, CARD);
@@ -109,6 +113,30 @@ void RidingScreen::update(TFT_eSPI& tft, const MotoState& state) {
     // 5. Opony (alarm tylko dla czujników z aktualnym odczytem)
     drawTire(tft, 0, state.frontTpmsOk, state.frontBar, state.frontTempC, state.minFrontBar);
     drawTire(tft, 1, state.rearTpmsOk,  state.rearBar,  state.rearTempC,  state.minRearBar);
+}
+
+void RidingScreen::drawTopBar(TFT_eSPI& tft, const MotoState& state) {
+    // GPS: nic bez modułu, żółte "GPS" przy szukaniu satelitów, zielone "GPS 7" z pozycją
+    if (state.gpsStatus == 0)
+        fGps.show(tft, FontLabel, "", 56, 3, 44, 14, LEFT, TEXT_MUTED, BG);
+    else if (state.gpsStatus == 1)
+        fGps.show(tft, FontLabel, "GPS", 56, 3, 44, 14, LEFT, ACCENT_YELLOW, BG);
+    else
+        fGps.show(tft, FontLabel, "GPS " + String(state.gpsSats), 56, 3, 44, 14, LEFT, ACCENT_GREEN, BG);
+
+    time_t now = time(nullptr);
+    String hm = "";
+    if (now > 1700000000) { // Zegar ustawiony (GPS lub telefon)
+        struct tm lt;
+        localtime_r(&now, &lt);
+        char b[6];
+        snprintf(b, sizeof(b), "%02d:%02d", lt.tm_hour, lt.tm_min);
+        hm = b;
+    }
+    fClock.show(tft, FontText, hm, 120, 1, 80, 18, CENTER, TFT_WHITE, BG);
+
+    // Jest pozycja, ale trasa się nie zapisuje (brak karty) - wymaganie GPS-4
+    fSd.show(tft, FontLabel, state.trackStatus == 2 ? "BEZ SD" : "", 196, 3, 46, 14, RIGHT, ACCENT_RED, BG);
 }
 
 void RidingScreen::drawTire(TFT_eSPI& tft, int idx, bool ok, float bar, int tempC, float minBar) {

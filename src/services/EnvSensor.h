@@ -20,10 +20,11 @@ private:
     uint8_t bmeAddr   = 0;     // 0 = brak barometru
     bool    hasHumid  = false; // true = BME280, false = BMP280 (bez wilgotności)
 
-    // Kalibracja altymetru: ciśnienie odniesienia liczone przy pierwszym odczycie
-    // tak, aby wysokość = "Wysokość startowa" z ustawień.
+    // Kalibracja altymetru: ciśnienie odniesienia (QNH) z wysokości GPS, a bez GPS
+    // tak, aby wysokość przy starcie = "Wysokość startowa" z ustawień.
     float seaLevelHpa  = 0.0f;
     int   calibBaseAlt = -100000;
+    bool  gpsCalibrated = false; // Od pierwszej dobrej pozycji GPS wysokość odniesienia daje GPS
 
     // Współczynniki kalibracyjne BME280 (z pamięci czujnika)
     uint16_t T1; int16_t T2, T3;
@@ -31,6 +32,7 @@ private:
     int32_t  tFine = 0;
 
     bool readAht20Temp(float& tempOut);
+    bool gpsAltGood(const MotoState& s) const;
     bool initBme(uint8_t addr);
     bool readBme(float& tempC, float& hPa);
     bool readRegs(uint8_t reg, uint8_t* buf, uint8_t len);

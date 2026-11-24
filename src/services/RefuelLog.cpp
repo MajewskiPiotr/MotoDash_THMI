@@ -1,4 +1,5 @@
 #include "RefuelLog.h"
+#include "TrackLogger.h"
 #include "Config.h"
 #include <Preferences.h>
 #include <SD_MMC.h>
@@ -69,6 +70,13 @@ void RefuelLog::addEvent(TankRecord& t, float liters, float odoKm, uint8_t type)
         t.nEv = REFUEL_MAX_EVENTS - 1;
     }
     t.ev[t.nEv++] = { now(), odoKm, liters, type };
+
+    // Miejsce tankowania na trasie GPX (gdy jest pozycja GPS i karta SD)
+    if (track) {
+        String desc = "bez pomiaru litrów";
+        if (liters > 0.0f) desc = String(liters, 1) + " L";
+        track->addWaypoint(type == REFUEL_TOPUP ? "Dolewka" : "Tankowanie do pełna", desc);
+    }
 }
 
 void RefuelLog::addTopUp(float liters, float odoKm) {

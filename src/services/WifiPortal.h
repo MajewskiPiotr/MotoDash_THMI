@@ -8,6 +8,7 @@ class SettingsScreen;
 class TripsScreen;
 class RefuelLog;
 class FuelCalculator;
+class TrackLogger;
 
 // Hotspot Wi-Fi "MotoDash" ze stroną WWW: stan motocykla, historia tras (+ pobranie CSV) i edycja ustawień.
 // Telefon łączy się z siecią MotoDash i otwiera http://192.168.4.1 (zwykle sam proponuje otwarcie strony).
@@ -15,7 +16,7 @@ class FuelCalculator;
 class WifiPortal {
 public:
     void init(MotoState* statePtr, SettingsScreen* settingsPtr, TripsScreen* tripsPtr,
-              RefuelLog* refuelPtr, FuelCalculator* fuelPtr);
+              RefuelLog* refuelPtr, FuelCalculator* fuelPtr, TrackLogger* trackPtr);
     void update();  // Wywoływać w każdym obiegu loop(): obsługa żądań HTTP/DNS i automatyczne wyłączenie
 
     void start();   // Włącza hotspot i serwer WWW
@@ -33,6 +34,7 @@ private:
     TripsScreen*    trips    = nullptr;
     RefuelLog*      refuels  = nullptr;
     FuelCalculator* fuel     = nullptr;
+    TrackLogger*    track    = nullptr;
 
     WebServer server{80};
     DNSServer dns;
@@ -47,5 +49,7 @@ private:
     void handleRefuels();
     void handleRefuelsCsv();
     void handleSetTime();
+    void handleGpxList();   // Lista plików GPX z karty SD (JSON)
+    void handleGpxFile();   // Pobranie jednego pliku GPX
     void handleNotFound();
 };

@@ -4,6 +4,7 @@
 #include "TripsScreen.h"
 #include "RefuelLog.h"
 #include "FuelCalculator.h"
+#include "TrackLogger.h"
 #include <sys/time.h>
 #include <WiFi.h>
 #include <SD_MMC.h>
@@ -65,6 +66,7 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  <div class="card"><div class="lbl">Akumulator</div><div class="val" id="volt">-</div></div>
  <div class="card"><div class="lbl">Otoczenie</div><div class="val" id="amb">-</div></div>
  <div class="card"><div class="lbl">Wysokosc</div><div class="val" id="altM">-</div><div class="unit" id="hPa"></div></div>
+ <div class="card"><div class="lbl">GPS</div><div class="val" id="gps">-</div><div class="unit" id="gpsInfo"></div></div>
  <div class="card"><div class="lbl">Mnoznik kalibracji</div><div class="val" id="cal">-</div></div>
  <div class="card"><div class="lbl">Opona przod</div><div class="val" id="tf">-</div></div>
  <div class="card"><div class="lbl">Opona tyl</div><div class="val" id="tr">-</div></div>
@@ -72,6 +74,8 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
 <section id="t1" class="hide"><div class="card">
  <table><thead><tr><th>#</th><th>Czas</th><th>km</th><th>L/100</th><th>km/h</th></tr></thead><tbody id="trips"></tbody></table>
  <a class="btn" href="/trasy.csv">Pobierz CSV</a>
+</div><div class="card"><div class="lbl">Zapisane trasy GPS (GPX - Google Earth, OsmAnd, Strava)</div>
+ <table><tbody id="gpx"></tbody></table>
 </div></section>
 <section id="t3" class="hide">
  <div class="tiles">
@@ -100,7 +104,7 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
 <script>
 let filled=false;
 function $(i){return document.getElementById(i)}
-function tab(n){for(let i=0;i<4;i++){$('t'+i).classList.toggle('hide',i!=n);$('b'+i).classList.toggle('on',i==n)}if(n==1)trips();if(n==3)refuels()}
+function tab(n){for(let i=0;i<4;i++){$('t'+i).classList.toggle('hide',i!=n);$('b'+i).classList.toggle('on',i==n)}if(n==1){trips();gpx()}if(n==3)refuels()}
 function u(v,un){return v+' <span class="unit">'+un+'</span>'}
 async function status(){try{const d=await (await fetch('/api/status')).json();
  const r=d.fuel/d.cap;$('fuel').innerHTML=u(d.fuel.toFixed(1),'/ '+d.cap.toFixed(1)+' L');$('fuel').className='val '+(r<0.1?'red':r<0.25?'yel':'');
@@ -109,7 +113,12 @@ async function status(){try{const d=await (await fetch('/api/status')).json();
  $('temp').innerHTML=u(d.temp,'&deg;C');$('temp').className='val '+(d.temp>d.tempWarn?'red':'');
  $('volt').innerHTML=u(d.volt.toFixed(1),'V');$('amb').innerHTML=u(d.amb.toFixed(1),'&deg;C');$('amb').className='val '+(d.amb<3?'blu':'');
  $('cal').textContent=d.cal.toFixed(2);
- if(d.baro){$('altM').innerHTML=u(d.altM,'m n.p.m.');$('hPa').textContent=d.hPa.toFixed(1)+' hPa'}else{$('altM').innerHTML='&mdash; <span class="unit">brak barometru</span>';$('hPa').textContent=''}
+ if(d.altOk){$('altM').innerHTML=u(d.altM,'m n.p.m.');$('hPa').textContent=d.baro?d.hPa.toFixed(1)+' hPa':'z GPS'}else{$('altM').innerHTML='&mdash; <span class="unit">brak czujnika</span>';$('hPa').textContent=''}
+ if(d.gps==0){$('gps').innerHTML='&mdash; <span class="unit">brak modulu</span>';$('gpsInfo').textContent=''}
+ else if(d.gps==1){$('gps').innerHTML='<span class="yel">szukam</span>';$('gpsInfo').textContent='satelity: '+d.sats}
+ else{const df=d.gspd>5?Math.round((d.spd-d.gspd)/d.gspd*100):null;$('gps').innerHTML=u(Math.round(d.gspd),'km/h');$('gps').className='val grn';
+  $('gpsInfo').innerHTML=d.sats+' sat. '+(df!==null?'&middot; licznik '+(df>0?'+':'')+df+'% ':'')+'&middot; '+(d.rec==1?'trasa sie zapisuje':d.rec==2?'<span class="red">brak karty SD - trasa sie nie zapisuje</span>':'')+
+  ' &middot; <a href="https://www.openstreetmap.org/?mlat='+d.lat+'&mlon='+d.lon+'#map=15/'+d.lat+'/'+d.lon+'" style="color:#3cf">mapa</a>'}
  const ty=(id,ok,b,t,bt,mn)=>{if(!ok){$(id).innerHTML='&mdash; <span class="unit">brak odczytu</span>';$(id).className='val';return}
   $(id).innerHTML=u(b.toFixed(1),'bar, '+t+'&deg;C'+(bt>=0?', bat. '+bt+'%':''));$(id).className='val '+(b<mn?'red':'grn')};
  ty('tf',d.fOk,d.fBar,d.fTemp,d.fBat,d.minF);ty('tr',d.rOk,d.rBar,d.rTemp,d.rBat,d.minR);
@@ -117,6 +126,9 @@ async function status(){try{const d=await (await fetch('/api/status')).json();
 }catch(e){}}
 async function trips(){try{const d=await (await fetch('/api/trips')).json();
  $('trips').innerHTML=d.length?d.map(t=>'<tr><td>'+t.id+'</td><td>'+String(Math.floor(t.min/60)).padStart(2,'0')+':'+String(t.min%60).padStart(2,'0')+'</td><td>'+t.km.toFixed(1)+'</td><td>'+t.fuel.toFixed(1)+'</td><td>'+t.spd+'</td></tr>').join(''):'<tr><td colspan="5">Brak zapisanych tras</td></tr>';
+}catch(e){}}
+async function gpx(){try{const d=await (await fetch('/api/gpx')).json();
+ $('gpx').innerHTML=d.length?d.map(f=>'<tr><td>'+f.n.replace('.gpx','').replace('_',' ').replace(/(\d\d)(\d\d)$/,'$1:$2')+(f.cur?' <span class="grn">(trwa)</span>':'')+'</td><td>'+(f.s/1024).toFixed(0)+' kB</td><td><a class="btn" style="margin:0;padding:6px 12px" href="/gpx?f='+encodeURIComponent(f.n)+'">Pobierz</a></td></tr>').join(''):'<tr><td>Brak zapisanych tras GPS</td></tr>';
 }catch(e){}}
 async function save(){const b=new URLSearchParams(new FormData($('f')));
  try{const r=await fetch('/api/settings',{method:'POST',body:b});$('msg').textContent=r.ok?'Zapisano w MotoDash':'Blad zapisu';filled=false;status()}catch(e){$('msg').textContent='Brak polaczenia'}}
@@ -161,12 +173,13 @@ status();setInterval(status,2000);
 // ---------------------------------------------------------------------------
 
 void WifiPortal::init(MotoState* statePtr, SettingsScreen* settingsPtr, TripsScreen* tripsPtr,
-                      RefuelLog* refuelPtr, FuelCalculator* fuelPtr) {
+                      RefuelLog* refuelPtr, FuelCalculator* fuelPtr, TrackLogger* trackPtr) {
     state    = statePtr;
     settings = settingsPtr;
     trips    = tripsPtr;
     refuels  = refuelPtr;
     fuel     = fuelPtr;
+    track    = trackPtr;
 
     // Trasy rejestrujemy raz - serwer startuje dopiero po włączeniu hotspotu
     server.on("/",             HTTP_GET,  [this]() { handleRoot(); });
@@ -177,6 +190,8 @@ void WifiPortal::init(MotoState* statePtr, SettingsScreen* settingsPtr, TripsScr
     server.on("/api/refuels",  HTTP_GET,  [this]() { handleRefuels(); });
     server.on("/tankowania.csv", HTTP_GET, [this]() { handleRefuelsCsv(); });
     server.on("/api/time",     HTTP_POST, [this]() { handleSetTime(); });
+    server.on("/api/gpx",      HTTP_GET,  [this]() { handleGpxList(); });
+    server.on("/gpx",          HTTP_GET,  [this]() { handleGpxFile(); });
     server.onNotFound(                    [this]() { handleNotFound(); });
 
     WiFi.mode(WIFI_OFF); // Radio wyłączone, dopóki użytkownik nie włączy hotspotu
@@ -239,7 +254,7 @@ void WifiPortal::handleRoot() {
 void WifiPortal::handleStatus() {
     const MotoState& s = *state;
     String j;
-    j.reserve(480);
+    j.reserve(640);
     j += "{\"fuel\":"   + String(s.fuelInTankL, 2);
     j += ",\"cap\":"    + String(s.tankCapacityL, 1);
     j += ",\"range\":"  + String(s.rangeKm);
@@ -265,6 +280,14 @@ void WifiPortal::handleStatus() {
     j += ",\"baro\":"   + String(s.baroOk ? 1 : 0);
     j += ",\"altM\":"   + String((int)roundf(s.altitudeM));
     j += ",\"hPa\":"    + String(s.pressureHpa, 1);
+    j += ",\"altOk\":"  + String(s.altValid ? 1 : 0);
+    j += ",\"gps\":"    + String(s.gpsStatus);
+    j += ",\"sats\":"   + String(s.gpsSats);
+    j += ",\"gspd\":"   + String(s.gpsSpeedKmh, 1);
+    j += ",\"spd\":"    + String(s.speedKmh);
+    j += ",\"lat\":"    + String(s.gpsLat, 6);
+    j += ",\"lon\":"    + String(s.gpsLon, 6);
+    j += ",\"rec\":"    + String(s.trackStatus);
     j += "}";
     server.send(200, "application/json", j);
 }
@@ -397,4 +420,50 @@ void WifiPortal::handleSetTime() {
         }
     }
     server.send(200, "application/json", "{\"ok\":true}");
+}
+
+// Lista plików GPX (najnowsze na górze)
+void WifiPortal::handleGpxList() {
+    String j = "[";
+    if (trips && trips->hasSd()) {
+        String names[60]; size_t sizes[60]; int n = 0;
+        fs::File dir = SD_MMC.open(TrackLogger::DIR);
+        if (dir && dir.isDirectory()) {
+            for (fs::File e = dir.openNextFile(); e && n < 60; e = dir.openNextFile()) {
+                String nm = e.name();
+                int slash = nm.lastIndexOf('/');
+                if (slash >= 0) nm = nm.substring(slash + 1);
+                if (nm.endsWith(".gpx")) { names[n] = nm; sizes[n] = e.size(); n++; }
+                e.close();
+            }
+            dir.close();
+        }
+        // Sortowanie malejąco po nazwie (= po dacie)
+        for (int a = 0; a < n; a++)
+            for (int b = a + 1; b < n; b++)
+                if (names[b] > names[a]) { String t = names[a]; names[a] = names[b]; names[b] = t; size_t z = sizes[a]; sizes[a] = sizes[b]; sizes[b] = z; }
+        String cur = track ? track->currentFile() : String();
+        for (int i = 0; i < n; i++) {
+            if (i) j += ",";
+            bool isCur = cur.endsWith(names[i]);
+            j += "{\"n\":\"" + names[i] + "\",\"s\":" + String((unsigned long)sizes[i]) + ",\"cur\":" + String(isCur ? 1 : 0) + "}";
+        }
+    }
+    j += "]";
+    server.send(200, "application/json", j);
+}
+
+void WifiPortal::handleGpxFile() {
+    String f = server.arg("f");
+    // Tylko nazwy plików z katalogu tras - bez ścieżek
+    if (!trips || !trips->hasSd() || !f.endsWith(".gpx") || f.indexOf('/') >= 0 || f.indexOf("..") >= 0) {
+        server.send(404, "text/plain", "Brak pliku");
+        return;
+    }
+    String path = String(TrackLogger::DIR) + "/" + f;
+    fs::File file = SD_MMC.open(path.c_str(), FILE_READ);
+    if (!file) { server.send(404, "text/plain", "Brak pliku"); return; }
+    server.sendHeader("Content-Disposition", "attachment; filename=" + f);
+    server.streamFile(file, "application/gpx+xml");
+    file.close();
 }

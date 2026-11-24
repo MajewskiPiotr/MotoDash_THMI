@@ -16,6 +16,8 @@ namespace Config {
     constexpr int     SD_FREQ_KHZ      = 20000; // Domyślne 40 MHz bywa za szybkie dla T-HMI - karta nie jest wykrywana
     constexpr uint8_t PIN_BTN_MODE     = 15; // Niebieski przycisk nawigacji (GPIO 15)
     constexpr uint8_t PIN_BTN_ACTION   = 16; // Czerwony przycisk akcji (GPIO 16)
+    constexpr uint8_t PIN_GPS_A        = 17; // Złącze Grove GPS (UART) - który pin nadaje, wykrywa się samo
+    constexpr uint8_t PIN_GPS_B        = 18;
 
     // --- EKRAN TANKOWANIA ---
     constexpr float         REFUEL_PROMPT_L   = 3.0f;  // Poniżej tej ilości paliwa [L] ekran Tankowania otwiera się sam po starcie
@@ -62,4 +64,14 @@ namespace Config {
     constexpr float ENGINE_DISPLACEMENT = 0.698f; // Pojemność skokowa w litrach (698 cm3)
     constexpr float VOLUMETRIC_EFF      = 0.84f;  // Szacowana sprawność wolumetryczna silnika
     constexpr int   ENGINE_TEMP_WARN    = 104;    // Próg alarmowy przegrzania płynu chłodzącego [°C]
+
+    // --- GPS i ZAPIS TRASY (GPX na karcie SD, katalog /trasy) ---
+    constexpr int   GPX_INTERVAL_S   = 5;      // Punkt trasy najczęściej co tyle sekund...
+    constexpr float GPX_MIN_MOVE_M   = 10.0f;  // ...o ile motocykl przejechał co najmniej tyle metrów
+    constexpr float GPX_MAX_GAP_M    = 50.0f;  // Przy szybkiej jeździe punkt najpóźniej co tyle metrów
+    constexpr float STOP_SPEED_KMH   = 3.0f;   // Poniżej tej prędkości motocykl stoi
+    constexpr int   STOP_MIN_S       = 300;    // Postój zaznaczany na mapie od tylu sekund (5 min)
+    constexpr long  TRIP_GAP_S       = 7200;   // Dłuższa przerwa (lub nowy dzień) = nowy plik trasy (2 h)
+    constexpr int   ALT_GPS_MIN_SATS = 6;      // Wysokość z GPS używana do korekty barometru od tylu satelitów
+    constexpr float ALT_GPS_MAX_HDOP = 2.0f;   // ...i przy dokładności HDOP nie gorszej niż ta
 }

@@ -118,8 +118,20 @@ void EnvSensor::update(MotoState& state) {
             state.pressureHpa = hPa;
             state.baroOk = true;
 
-            // (Re)kalibracja: przy pierwszym odczycie lub po zmianie "Wysokości startowej"
-            if (calibBaseAlt != state.baseAltitudeM) {
+            bool gpsGood = gpsAltGood(state);
+            if (gpsGood) {
+                // Dobra pozycja GPS: barometr dostraja się do wysokości z GPS. Barometr daje gładki,
+                // dokładny odczyt zmian (±1 m), GPS pilnuje poziomu (bez dryfu przy zmianie pogody).
+                float qnh = hPa / powf(1.0f - state.gpsAltM / 44330.0f, 5.255f);
+                if (!gpsCalibrated) {
+                    seaLevelHpa = qnh;
+                    gpsCalibrated = true;
+                    Serial.printf("[EnvSensor] Altymetr skalibrowany z GPS: %.0f m (QNH %.1f hPa)\n", state.gpsAltM, qnh);
+                } else {
+                    seaLevelHpa += 0.02f * (qnh - seaLevelHpa); // powolna korekta, ~2 min
+                }
+            } else if (!gpsCalibrated && calibBaseAlt != state.baseAltitudeM) {
+                // Bez GPS: kalibracja z "Wysokości startowej" (przy starcie i po zmianie w ustawieniach)
                 calibBaseAlt = state.baseAltitudeM;
                 seaLevelHpa  = hPa / powf(1.0f - calibBaseAlt / 44330.0f, 5.255f);
                 Serial.printf("[EnvSensor] Altymetr skalibrowany: %d m, %.1f hPa (QNH %.1f)\n",
@@ -131,6 +143,14 @@ void EnvSensor::update(MotoState& state) {
             Serial.println("[EnvSensor] Blad odczytu BME280");
         }
     }
+
+    // Bez barometru wysokość prosto z GPS (mniej dokładna, skacze o kilka metrów)
+    if (!state.baroOk && state.gpsStatus == 2) state.altitudeM = state.gpsAltM;
+    state.altValid = state.baroOk || state.gpsStatus == 2;
+}
+
+bool EnvSensor::gpsAltGood(const MotoState& s) const {
+    return s.gpsStatus == 2 && s.gpsSats >= Config::ALT_GPS_MIN_SATS && s.gpsHdop <= Config::ALT_GPS_MAX_HDOP;
 }
 
 // Odczyt temperatury z AHT20 / DHT20

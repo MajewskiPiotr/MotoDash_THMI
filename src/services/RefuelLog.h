@@ -1,4 +1,5 @@
 #pragma once
+class TrackLogger;
 #include <Arduino.h>
 #include "MotoState.h"
 
@@ -51,6 +52,7 @@ class RefuelLog {
 public:
     void init(float odoKm);              // Wczytuje historię z Flash; odoKm = obecny stan licznika
     void setSdAvailable(bool sd) { sdAvailable = sd; }
+    void setTrackLogger(TrackLogger* t) { track = t; } // Tankowania zaznaczane na trasie GPX
 
     // Dolewka ("Dolej") - dopisywana do bieżącego okresu
     void addTopUp(float liters, float odoKm);
@@ -73,6 +75,7 @@ private:
     uint8_t    count = 0;
     TankRecord current;                 // Bieżący (otwarty) okres
     bool       sdAvailable = false;
+    TrackLogger* track     = nullptr;
 
     void addEvent(TankRecord& t, float liters, float odoKm, uint8_t type);
     void startNewPeriod(float odoKm, uint16_t n);

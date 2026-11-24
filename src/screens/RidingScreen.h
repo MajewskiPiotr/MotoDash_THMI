@@ -27,7 +27,8 @@ private:
     int8_t lastTireState[2] = {-1, -1}; // 0 = brak odczytu, 1 = OK, 2 = alarm
 
     // Pola z wartościami (gładka czcionka, rysowane tylko po zmianie)
-    SmoothText::Field fTemp, fAlt, fInst, fAvg, fVolt, fAmb, fFuel, fRange, fTireBar[2], fTireTemp[2];
+    SmoothText::Field fClock, fGps, fSd, fTemp, fAlt, fInst, fAvg, fVolt, fAmb, fFuel, fRange, fTireBar[2], fTireTemp[2];
 
+    void drawTopBar(TFT_eSPI& tft, const MotoState& state);
     void drawTire(TFT_eSPI& tft, int idx, bool ok, float bar, int tempC, float minBar);
 };
