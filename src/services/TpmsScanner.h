@@ -30,10 +30,6 @@ private:
     Reading front, rear;
     portMUX_TYPE lock = portMUX_INITIALIZER_UNLOCKED;
     unsigned long lastScanCheckMs = 0;
-    // Diagnostyka (tryb rozpoznawania): ile ogłoszeń BLE odebrano i jaki najsilniejszy sygnał
-    volatile uint32_t advCount = 0;
-    volatile int      advBestRssi = -127;
-    unsigned long     lastStatsMs = 0;
     bool started = false;
 
     int  wheelFor(const String& addr, uint8_t sensorNo) const; // 0 = przód, 1 = tył, -1 = nie nasz

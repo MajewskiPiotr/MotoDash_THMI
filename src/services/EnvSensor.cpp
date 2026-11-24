@@ -42,6 +42,9 @@ bool EnvSensor::readRegs(uint8_t reg, uint8_t* buf, uint8_t len) {
 }
 
 bool EnvSensor::initBme(uint8_t addr) {
+    // Najpierw samo "zapukanie" pod adres - bez czujnika nie ma błędów biblioteki Wire w logu
+    Wire.beginTransmission(addr);
+    if (Wire.endTransmission() != 0) { bmeAddr = 0; return false; }
     bmeAddr = addr;
     uint8_t id = 0;
     if (!readRegs(0xD0, &id, 1) || (id != 0x60 && id != 0x58)) {
