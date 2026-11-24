@@ -121,9 +121,11 @@ void CanReader::update(MotoState& s) {
             twai_status_info_t st;
             if ((probeRounds < 2 || now - lastDiagMs > 30000) && twai_get_status_info(&st) == ESP_OK) {
                 if (combo == COMBO_COUNT - 1) lastDiagMs = now;
-                const char* why = st.bus_error_count > 0 ? "bledy na szynie (zla predkosc lub zamienione CANH/CANL)"
-                                : st.tx_error_counter >= 128 ? "nikt nie potwierdza ramki (zaplon? kable CANH/CANL? masa?)"
-                                : st.msgs_to_tx > 0 ? "ramka nie wyszla z modulu (CTX/CRX? zasilanie 3V3?)"
+                // Brak potwierdzenia (ACK) też liczy się jako błąd szyny - rozróżniamy po błędach odbioru (RX)
+                const char* why = st.rx_error_counter > 0 ? "bledy odbioru (zla predkosc szyny lub zamienione CANH/CANL)"
+                                : st.tx_error_counter >= 128 ? "nikt nie potwierdza ramki: przewody nie trafiaja w CAN auta (piny 6/14? styk? masa pin 5?) albo zaplon wylaczony"
+                                : st.bus_error_count > 0 ? "bledy na szynie"
+                                : st.msgs_to_tx > 0 ? "ramka nie wyszla z modulu (odwrocone CTX/CRX - normalne dla tej proby)"
                                 : "ramka wyslana i potwierdzona, ale brak odpowiedzi OBD";
                 Serial.printf("[CAN] Proba %lu kb/s, CTX=IO%d: bledy TX %lu, RX %lu, szyny %lu, do wyslania %lu -> %s\n",
                               (unsigned long)COMBOS[combo].kbps,
