@@ -40,6 +40,8 @@ struct MotoState {
     // --- DANE Z CZUJNIKA OTOCZENIA (GROVE I2C) ---
     float ambientTempC    = 18.5f; // Temperatura powietrza na zewnątrz [°C]
     float altitudeM       = 120.0f;// Aktualna wysokość n.p.m. z barometru [m]
+    float pressureHpa     = 0.0f;  // Ciśnienie atmosferyczne z BME280 [hPa]
+    bool  baroOk          = false; // Czy jest aktualny odczyt z barometru
 
     // --- DANE Z OPON (BLUETOOTH BLE TPMS) ---
     // Wartości mają sens tylko, gdy *TpmsOk == true (świeży odczyt z czujnika)

@@ -64,6 +64,7 @@ static const char PAGE_HTML[] PROGMEM = R"HTML(<!DOCTYPE html>
  <div class="card"><div class="lbl">Temp. silnika</div><div class="val" id="temp">-</div></div>
  <div class="card"><div class="lbl">Akumulator</div><div class="val" id="volt">-</div></div>
  <div class="card"><div class="lbl">Otoczenie</div><div class="val" id="amb">-</div></div>
+ <div class="card"><div class="lbl">Wysokosc</div><div class="val" id="altM">-</div><div class="unit" id="hPa"></div></div>
  <div class="card"><div class="lbl">Mnoznik kalibracji</div><div class="val" id="cal">-</div></div>
  <div class="card"><div class="lbl">Opona przod</div><div class="val" id="tf">-</div></div>
  <div class="card"><div class="lbl">Opona tyl</div><div class="val" id="tr">-</div></div>
@@ -108,6 +109,7 @@ async function status(){try{const d=await (await fetch('/api/status')).json();
  $('temp').innerHTML=u(d.temp,'&deg;C');$('temp').className='val '+(d.temp>d.tempWarn?'red':'');
  $('volt').innerHTML=u(d.volt.toFixed(1),'V');$('amb').innerHTML=u(d.amb.toFixed(1),'&deg;C');$('amb').className='val '+(d.amb<3?'blu':'');
  $('cal').textContent=d.cal.toFixed(2);
+ if(d.baro){$('altM').innerHTML=u(d.altM,'m n.p.m.');$('hPa').textContent=d.hPa.toFixed(1)+' hPa'}else{$('altM').innerHTML='&mdash; <span class="unit">brak barometru</span>';$('hPa').textContent=''}
  const ty=(id,ok,b,t,bt,mn)=>{if(!ok){$(id).innerHTML='&mdash; <span class="unit">brak odczytu</span>';$(id).className='val';return}
   $(id).innerHTML=u(b.toFixed(1),'bar, '+t+'&deg;C'+(bt>=0?', bat. '+bt+'%':''));$(id).className='val '+(b<mn?'red':'grn')};
  ty('tf',d.fOk,d.fBar,d.fTemp,d.fBat,d.minF);ty('tr',d.rOk,d.rBar,d.rTemp,d.rBat,d.minR);
@@ -237,7 +239,7 @@ void WifiPortal::handleRoot() {
 void WifiPortal::handleStatus() {
     const MotoState& s = *state;
     String j;
-    j.reserve(420);
+    j.reserve(480);
     j += "{\"fuel\":"   + String(s.fuelInTankL, 2);
     j += ",\"cap\":"    + String(s.tankCapacityL, 1);
     j += ",\"range\":"  + String(s.rangeKm);
@@ -260,6 +262,9 @@ void WifiPortal::handleStatus() {
     j += ",\"minR\":"   + String(s.minRearBar, 2);
     j += ",\"cal\":"    + String(s.fuelCalFactor, 3);
     j += ",\"alt\":"    + String(s.baseAltitudeM);
+    j += ",\"baro\":"   + String(s.baroOk ? 1 : 0);
+    j += ",\"altM\":"   + String((int)roundf(s.altitudeM));
+    j += ",\"hPa\":"    + String(s.pressureHpa, 1);
     j += "}";
     server.send(200, "application/json", j);
 }

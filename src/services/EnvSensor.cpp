@@ -1,86 +1,152 @@
 #include "EnvSensor.h"
 #include "Config.h"
-#include <Wire.h> // Wbudowana biblioteka ESP32 do komunikacji po magistrali I2C
+#include <Wire.h>
+#include <math.h>
 
 void EnvSensor::init() {
-    // 1. Uruchamiamy magistralę I2C na fizycznych pinach portu Grove płytki LilyGO T-HMI (SDA=43, SCL=44)
     Wire.begin(Config::PIN_I2C_SDA, Config::PIN_I2C_SCL);
-    Wire.setClock(100000); // Taktowanie 100 kHz zapewniające stabilną pracę na przewodzie
+    Wire.setClock(100000);
+    delay(40); // AHT20 potrzebuje ~40 ms po włączeniu zasilania
 
-    delay(40); // Czujnik AHT20 potrzebuje 40 ms po podaniu zasilania na uruchomienie wewnętrznej logiki
-
-    // 2. Wysyłamy komendę kalibracji/inicjalizacji czujnika AHT20 (0xBE, 0x08, 0x00)
+    // --- AHT20 / DHT20 ---
     Wire.beginTransmission(AHT20_ADDR);
-    Wire.write(0xBE);
-    Wire.write(0x08);
-    Wire.write(0x00);
-
-    if (Wire.endTransmission() == 0) {
-        sensorReady = true;
-        delay(10); // Krótka pauza na zakończenie kalibracji
-        Serial.println("[EnvSensor] Czujnik AHT20 (0x38) zainicjalizowany poprawnie!");
+    Wire.write(0xBE); Wire.write(0x08); Wire.write(0x00);
+    ahtReady = (Wire.endTransmission() == 0);
+    if (ahtReady) {
+        delay(10);
+        Serial.println("[EnvSensor] AHT20/DHT20 (0x38) wykryty");
     } else {
-        sensorReady = false;
-        Serial.println("[EnvSensor] UWAGA: Brak odpowiedzi czujnika AHT20 pod adresem 0x38!");
+        Serial.println("[EnvSensor] Brak AHT20/DHT20 (0x38)");
     }
+
+    // --- BME280 / BMP280: próbujemy oba możliwe adresy ---
+    if (!initBme(0x76) && !initBme(0x77)) {
+        Serial.println("[EnvSensor] Brak BME280/BMP280 (0x76/0x77)");
+    }
+}
+
+bool EnvSensor::writeReg(uint8_t reg, uint8_t val) {
+    Wire.beginTransmission(bmeAddr);
+    Wire.write(reg); Wire.write(val);
+    return Wire.endTransmission() == 0;
+}
+
+bool EnvSensor::readRegs(uint8_t reg, uint8_t* buf, uint8_t len) {
+    Wire.beginTransmission(bmeAddr);
+    Wire.write(reg);
+    if (Wire.endTransmission(false) != 0) return false;
+    if (Wire.requestFrom(bmeAddr, len) != len) return false;
+    for (uint8_t i = 0; i < len; i++) buf[i] = Wire.read();
+    return true;
+}
+
+bool EnvSensor::initBme(uint8_t addr) {
+    bmeAddr = addr;
+    uint8_t id = 0;
+    if (!readRegs(0xD0, &id, 1) || (id != 0x60 && id != 0x58)) {
+        bmeAddr = 0;
+        return false;
+    }
+    hasHumid = (id == 0x60);
+
+    writeReg(0xE0, 0xB6); // miękki reset
+    delay(5);
+
+    uint8_t c[24];
+    if (!readRegs(0x88, c, 24)) { bmeAddr = 0; return false; }
+    T1 = c[0]  | (c[1]  << 8); T2 = c[2]  | (c[3]  << 8); T3 = c[4]  | (c[5]  << 8);
+    P1 = c[6]  | (c[7]  << 8); P2 = c[8]  | (c[9]  << 8); P3 = c[10] | (c[11] << 8);
+    P4 = c[12] | (c[13] << 8); P5 = c[14] | (c[15] << 8); P6 = c[16] | (c[17] << 8);
+    P7 = c[18] | (c[19] << 8); P8 = c[20] | (c[21] << 8); P9 = c[22] | (c[23] << 8);
+
+    if (hasHumid) writeReg(0xF2, 0x01); // wilgotność x1 (musi być przed 0xF4)
+    writeReg(0xF5, 0xA8);               // odczyt co 1 s, filtr IIR x4 (wygładza podmuchy)
+    writeReg(0xF4, 0x57);               // temp x2, ciśnienie x16, tryb ciągły
+
+    Serial.printf("[EnvSensor] %s wykryty pod adresem 0x%02X\n", hasHumid ? "BME280" : "BMP280", addr);
+    return true;
+}
+
+// Wzory kompensacji z noty katalogowej Bosch BME280 (wersja całkowitoliczbowa)
+bool EnvSensor::readBme(float& tempC, float& hPa) {
+    uint8_t d[6];
+    if (!readRegs(0xF7, d, 6)) return false;
+    int32_t adcP = ((int32_t)d[0] << 12) | ((int32_t)d[1] << 4) | (d[2] >> 4);
+    int32_t adcT = ((int32_t)d[3] << 12) | ((int32_t)d[4] << 4) | (d[5] >> 4);
+    if (adcT == 0x80000 || adcP == 0x80000) return false; // pomiar jeszcze niegotowy
+
+    int32_t v1 = ((((adcT >> 3) - ((int32_t)T1 << 1))) * ((int32_t)T2)) >> 11;
+    int32_t v2 = (((((adcT >> 4) - ((int32_t)T1)) * ((adcT >> 4) - ((int32_t)T1))) >> 12) * ((int32_t)T3)) >> 14;
+    tFine = v1 + v2;
+    tempC = ((tFine * 5 + 128) >> 8) / 100.0f;
+
+    int64_t p1 = ((int64_t)tFine) - 128000;
+    int64_t p2 = p1 * p1 * (int64_t)P6;
+    p2 = p2 + ((p1 * (int64_t)P5) << 17);
+    p2 = p2 + (((int64_t)P4) << 35);
+    p1 = ((p1 * p1 * (int64_t)P3) >> 8) + ((p1 * (int64_t)P2) << 12);
+    p1 = (((((int64_t)1) << 47) + p1)) * ((int64_t)P1) >> 33;
+    if (p1 == 0) return false;
+    int64_t p = 1048576 - adcP;
+    p = (((p << 31) - p2) * 3125) / p1;
+    p1 = (((int64_t)P9) * (p >> 13) * (p >> 13)) >> 25;
+    p2 = (((int64_t)P8) * p) >> 19;
+    p = ((p + p1 + p2) >> 8) + (((int64_t)P7) << 4);
+    hPa = (float)((uint32_t)p) / 25600.0f; // Pa*256 -> hPa
+    return hPa > 300.0f && hPa < 1100.0f;
 }
 
 void EnvSensor::update(MotoState& state) {
-    // Odczytujemy temperaturę spokojnie co 2 sekundy (2000 ms)
     if (millis() - lastReadMs < 2000) return;
     lastReadMs = millis();
 
-    if (!sensorReady) return;
+    bool tempFromAht = false;
+    if (ahtReady) {
+        float t;
+        if (readAht20Temp(t)) {
+            state.ambientTempC = t;
+            tempFromAht = true;
+        } else {
+            Serial.println("[EnvSensor] Blad odczytu AHT20");
+        }
+    }
 
-    float measuredTemp = 0.0f;
-    // Pobieramy aktualny pomiar i wpisujemy do współdzielonego obiektu MotoState
-    if (readAht20Temp(measuredTemp)) {
-        state.ambientTempC = measuredTemp;
-      //  Serial.println("[EnvSensor] Temperatura otoczenia: " + String(state.ambientTempC, 1) + " C");
-    } else {
-        Serial.println("[EnvSensor] Blad odczytu danych z czujnika AHT20");
+    if (bmeAddr) {
+        float t, hPa;
+        if (readBme(t, hPa)) {
+            if (!tempFromAht) state.ambientTempC = t;
+            state.pressureHpa = hPa;
+            state.baroOk = true;
+
+            // (Re)kalibracja: przy pierwszym odczycie lub po zmianie "Wysokości startowej"
+            if (calibBaseAlt != state.baseAltitudeM) {
+                calibBaseAlt = state.baseAltitudeM;
+                seaLevelHpa  = hPa / powf(1.0f - calibBaseAlt / 44330.0f, 5.255f);
+                Serial.printf("[EnvSensor] Altymetr skalibrowany: %d m, %.1f hPa (QNH %.1f)\n",
+                              calibBaseAlt, hPa, seaLevelHpa);
+            }
+            state.altitudeM = 44330.0f * (1.0f - powf(hPa / seaLevelHpa, 0.1903f));
+        } else {
+            state.baroOk = false;
+            Serial.println("[EnvSensor] Blad odczytu BME280");
+        }
     }
 }
 
-// Odczyt temperatury bezpośrednio z rejestrów czujnika AHT20 / DHT20
+// Odczyt temperatury z AHT20 / DHT20
 bool EnvSensor::readAht20Temp(float& tempOut) {
-    // 1. Wysyłamy rozkaz wyzwolenia pojedynczego pomiaru (0xAC, 0x33, 0x00)
     Wire.beginTransmission(AHT20_ADDR);
-    Wire.write(0xAC);
-    Wire.write(0x33);
-    Wire.write(0x00);
-    if (Wire.endTransmission() != 0) {
-        return false;
-    }
+    Wire.write(0xAC); Wire.write(0x33); Wire.write(0x00);
+    if (Wire.endTransmission() != 0) return false;
+    delay(80); // pomiar trwa do 80 ms
 
-    // 2. Według noty katalogowej AHT20 pomiar trwa maksymalnie 80 ms
-    delay(80);
+    if (Wire.requestFrom(AHT20_ADDR, (uint8_t)6) != 6) return false;
+    uint8_t status = Wire.read();
+    Wire.read(); Wire.read();
+    uint8_t b3 = Wire.read(), b4 = Wire.read(), b5 = Wire.read();
+    if (status & 0x80) return false; // pomiar niegotowy
 
-    // 3. Odbieramy 6 bajtów odpowiedzi:
-    //: Status | [1..2]: Wilgotność |: Wilgotność (4 bity) + Temperatura (4 bity) | [4..5]: Temperatura
-    if (Wire.requestFrom(AHT20_ADDR, (uint8_t)6) != 6) {
-        return false;
-    }
-
-    uint8_t status = Wire.read(); // Bajt statusu (bit 7 == 0 oznacza, że pomiar jest gotowy)
-    Wire.read();                  // Pomijamy starszy bajt wilgotności
-    Wire.read();                  // Pomijamy środkowy bajt wilgotności
-
-    uint8_t b3 = Wire.read();     // Młodsze 4 bity tego bajtu to najstarsze bity temperatury
-    uint8_t b4 = Wire.read();     // Środkowy bajt temperatury
-    uint8_t b5 = Wire.read();     // Najmłodszy bajt temperatury
-
-    // Jeśli bit zajętości (0x80) jest nadal ustawiony, pomiar się nie zakończył
-    if (status & 0x80) {
-        return false;
-    }
-
-    // 4. Składamy 20-bitową wartość surową temperatury z bajtów b3, b4, b5
-    uint32_t rawTemp = ((uint32_t)(b3 & 0x0F) << 16) | ((uint32_t)b4 << 8) | (uint32_t)b5;
-
-    // 5. Przeliczamy na stopnie Celsjusza według oficjalnego wzoru producenta Aosong AHT20:
-    // T [°C] = (rawTemp / 2^20) * 200 - 50
-    tempOut = ((float)rawTemp / 1048576.0f) * 200.0f - 50.0f;
-
+    uint32_t raw = ((uint32_t)(b3 & 0x0F) << 16) | ((uint32_t)b4 << 8) | b5;
+    tempOut = ((float)raw / 1048576.0f) * 200.0f - 50.0f;
     return true;
 }
